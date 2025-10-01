@@ -60,8 +60,9 @@ class NearestNeighbor2Opt:
         if k - i <= 1:  # Adjacent or same cities
             return 0.0
             
+        n = len(path)
         a, b = path[i-1], path[i]
-        c, d = path[k], path[(k+1) % self.n_cities]
+        c, d = path[k], path[(k+1) % n]
         
         old_distance = (self.adj_matrix[a][b] + 
                        self.adj_matrix[c][d])
@@ -82,12 +83,16 @@ class NearestNeighbor2Opt:
         # Get initial solution from nearest neighbor
         result, _, _ = self.nn.solve(start_city)
         path, _ = result
-        path = path[:-1]  # Remove duplicate start city
+        # Remove the duplicate start city at the end for 2-opt processing
+        if len(path) > 1 and path[0] == path[-1]:
+            path = path[:-1]
         improved = True
         while improved:
             improved = False
-            for i in range(1, len(path) - 1):
+            for i in range(1, len(path)):
                 for k in range(i + 1, len(path)):
+                    if k - i <= 1:  # Skip adjacent cities
+                        continue
                     delta = self._calculate_swap_delta(path, i, k)
                     if delta < 0:  # Improvement found
                         path = self._swap_2opt(path, i, k)
@@ -95,6 +100,7 @@ class NearestNeighbor2Opt:
                         break
                 if improved:
                     break
+        
         # Add start city to complete the cycle
         path.append(path[0])
         total_cost = calculate_path_cost(path, self.adj_matrix)
@@ -122,7 +128,10 @@ class RepeatedRandomNN:
         
         while unvisited:
             candidates = self._get_k_nearest(current, unvisited, k)
-            next_city = random.choice(candidates)
+            if len(candidates) == 1:
+                next_city = candidates[0]
+            else:
+                next_city = random.choice(candidates)
             total_cost += self.adj_matrix[current][next_city]
             current = next_city
             path.append(current)
@@ -135,26 +144,28 @@ class RepeatedRandomNN:
         return path, total_cost
     
     @time_tracked
-    def solve(self, k: int = 3, num_repeats: int = 10, 
-             start_city: int = 0) -> Tuple[List[int], float]:
+    def solve(self, k: int = 3, num_repeats: int = 30, start_city: int = 0) -> Tuple[List[int], float]:
         """
-        Find best solution using repeated random nearest neighbor.
-        
+        Solve TSP using Repeated Random Nearest Neighbor.
         Args:
-            k (int): Number of nearest neighbors to consider
-            num_repeats (int): Number of times to repeat the algorithm
-            start_city (int): The city to start from. Defaults to 0.
-            
+            k (int): Number of nearest cities to consider 
+            num_repeats (int): Number of repeated runs
+            start_city (int): Starting city
         Returns:
-            Tuple[List[int], float]: The best path found and its cost
+            Tuple[List[int], float]: Best tour found and its cost
         """
+        
         best_path = None
         best_cost = float('inf')
         
-        for _ in range(num_repeats):
-            path, cost = self._single_solution(start_city, k)
-            if cost < best_cost:
-                best_path = path
-                best_cost = cost
+        # Try multiple k values around the chosen one for better results
+        k_values = [max(1, k-1), k, min(self.n_cities-1, k+1)]
+        
+        for test_k in k_values:
+            for _ in range(num_repeats // len(k_values)):
+                path, cost = self._single_solution(start_city, test_k)
+                if cost < best_cost:
+                    best_path = path
+                    best_cost = cost
         
         return best_path, best_cost

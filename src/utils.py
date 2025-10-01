@@ -52,6 +52,155 @@ def calculate_path_cost(path: List[int], adj_matrix: np.ndarray) -> float:
         cost += adj_matrix[path[-1]][path[0]]
     return cost
 
+def validate_tsp_solution(path: List[int], adj_matrix: np.ndarray, reported_cost: float = None) -> dict:
+    """
+    Comprehensive validation of a TSP solution.
+    
+    Args:
+        path (List[int]): The tour path
+        adj_matrix (np.ndarray): Adjacency matrix
+        reported_cost (float, optional): Cost reported by algorithm
+        
+    Returns:
+        dict: Validation results with detailed information
+    """
+    n = len(adj_matrix)
+    validation = {
+        'valid': True,
+        'errors': [],
+        'path_length_correct': False,
+        'cities_complete': False, 
+        'no_duplicates': False,
+        'cost_matches': False,
+        'calculated_cost': 0.0,
+        'expected_path_length': n + 1
+    }
+    
+    # Check 1: Path length should be n+1 (all cities + return to start)
+    if len(path) == n + 1:
+        validation['path_length_correct'] = True
+    else:
+        validation['valid'] = False
+        validation['errors'].append(f"Path length {len(path)} != {n+1} (expected n+1)")
+    
+    # Check 2: Should start and end with same city
+    if len(path) >= 2:
+        if path[0] != path[-1]:
+            validation['valid'] = False
+            validation['errors'].append(f"Path doesn't return to start: {path[0]} != {path[-1]}")
+    
+    # Check 3: All cities 0 to n-1 should appear exactly once (excluding duplicate start/end)
+    if len(path) >= 2:
+        cities_in_path = set(path[:-1])  # Exclude the return-to-start city
+        expected_cities = set(range(n))
+        
+        if cities_in_path == expected_cities:
+            validation['cities_complete'] = True
+        else:
+            validation['valid'] = False
+            missing = expected_cities - cities_in_path
+            extra = cities_in_path - expected_cities
+            if missing:
+                validation['errors'].append(f"Missing cities: {sorted(missing)}")
+            if extra:
+                validation['errors'].append(f"Extra cities: {sorted(extra)}")
+    
+    # Check 4: No duplicate cities (except start/end)
+    if len(path) >= 2:
+        path_without_return = path[:-1]
+        if len(path_without_return) == len(set(path_without_return)):
+            validation['no_duplicates'] = True
+        else:
+            validation['valid'] = False
+            validation['errors'].append("Duplicate cities found in path (excluding return)")
+    
+    # Check 5: Calculate actual cost and compare with reported cost
+    if validation['path_length_correct']:
+        calculated_cost = calculate_path_cost(path[:-1], adj_matrix)  # Remove duplicate end city
+        validation['calculated_cost'] = calculated_cost
+        
+        if reported_cost is not None:
+            if abs(calculated_cost - reported_cost) < 1e-10:
+                validation['cost_matches'] = True
+            else:
+                validation['valid'] = False
+                validation['errors'].append(f"Cost mismatch: calculated {calculated_cost:.6f} != reported {reported_cost:.6f}")
+    
+    return validation
+
+def test_algorithm_on_ngon(algorithm_func, matrix_file: str, expected_cost: float = None) -> dict:
+    """
+    Test a TSP algorithm on an n-gon matrix and validate results.
+    
+    Args:
+        algorithm_func: Function that takes adj_matrix and returns (path, cost)
+        matrix_file: Path to n-gon matrix file
+        expected_cost: Expected optimal cost (usually n for n-gon)
+        
+    Returns:
+        dict: Test results with validation info
+    """
+    try:
+        # Load matrix
+        adj_matrix = load_matrix(matrix_file)
+        n = len(adj_matrix)
+        
+        if expected_cost is None:
+            expected_cost = float(n)  # For n-gon, optimal cost is n
+        
+        # Run algorithm  
+        result = algorithm_func(adj_matrix)
+        
+        # Handle different return formats (some have timing info)
+        if isinstance(result, tuple) and len(result) == 3:
+            # Format: (solution, wall_time, cpu_time) from @time_tracked
+            solution, wall_time, cpu_time = result
+            if isinstance(solution, tuple) and len(solution) == 3:
+                # A* format: (path, cost, nodes)
+                path, cost, nodes = solution
+            elif isinstance(solution, tuple) and len(solution) == 2:
+                # Standard format: (path, cost)
+                path, cost = solution
+            else:
+                # Fallback
+                path = solution if isinstance(solution, list) else []
+                cost = calculate_path_cost(path[:-1] if len(path) > 0 else [], adj_matrix)
+        elif isinstance(result, tuple) and len(result) == 2:
+            # Format: (path, cost)
+            path, cost = result
+        else:
+            # Format: path only or unknown
+            path = result if isinstance(result, list) else []
+            cost = calculate_path_cost(path[:-1] if len(path) > 0 else [], adj_matrix)
+        
+        # Add return to start if not present
+        if len(path) > 0 and path[0] != path[-1]:
+            path = path + [path[0]]
+        
+        # Validate solution
+        validation = validate_tsp_solution(path, adj_matrix, cost)
+        
+        # Add test-specific info
+        test_result = {
+            'matrix_file': matrix_file,
+            'matrix_size': n,
+            'expected_cost': expected_cost,
+            'algorithm_path': path,
+            'algorithm_cost': cost,
+            'cost_ratio': cost / expected_cost if expected_cost > 0 else float('inf'),
+            'validation': validation,
+            'passed': validation['valid'] and cost <= expected_cost * 1.01  # Allow 1% tolerance
+        }
+        
+        return test_result
+        
+    except Exception as e:
+        return {
+            'matrix_file': matrix_file,
+            'error': str(e),
+            'passed': False
+        }
+
 def get_matrix_files(size: int = None) -> List[str]:
     """
     Get all matrix files for a specific size or all sizes if not specified.

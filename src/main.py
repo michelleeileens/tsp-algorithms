@@ -9,26 +9,36 @@ from src.algorithms.nearest_neighbor import NearestNeighbor, NearestNeighbor2Opt
 from src.algorithms.astar import AStarTSP
 from src.algorithms.local_search import HillClimbing, SimulatedAnnealing, GeneticAlgorithm
 from src.utils import load_matrix, get_matrix_files
+# REQUIRED PLOTTING FUNCTIONS FOR ASSIGNMENT
 from src.visualization.plotting import (
-    plot_rrnn_k_parameter,
-    plot_rrnn_repeats_parameter,
+    # Part 1: NN algorithms comparison (3 plots - sizes 5,10,15,20,25,30)
     plot_nn_algorithms_wall_time,
     plot_nn_algorithms_cpu_time,
     plot_nn_algorithms_cost,
+    
+    # Part 2: A* comparison (4 plots - sizes 5-10)
     plot_relative_wall_time_with_nodes,
     plot_relative_cpu_time_with_nodes,
     plot_relative_cost_with_nodes,
     plot_astar_nodes_expanded,
-    plot_hc_hyperparameter,
-    plot_sa_hyperparameter,
-    plot_ga_hyperparameter,
-    plot_hc_convergence,
-    plot_sa_convergence,
-    plot_ga_convergence,
+    
+    # Part 3: Local search comparison (3 plots - sizes 5-10)
     plot_local_search_relative_wall_time,
     plot_local_search_relative_cpu_time,
     plot_local_search_relative_cost
 )
+
+# UNUSED PLOTTING FUNCTIONS (commented out - can be enabled for detailed analysis)
+# from src.visualization.plotting import (
+#     plot_rrnn_k_parameter,           # RRNN parameter tuning
+#     plot_rrnn_repeats_parameter,     # RRNN parameter tuning  
+#     plot_hc_hyperparameter,          # Hill Climbing parameter tuning
+#     plot_sa_hyperparameter,          # Simulated Annealing parameter tuning
+#     plot_ga_hyperparameter,          # Genetic Algorithm parameter tuning
+#     plot_hc_convergence,             # Hill Climbing convergence analysis
+#     plot_sa_convergence,             # Simulated Annealing convergence analysis
+#     plot_ga_convergence              # Genetic Algorithm convergence analysis
+# )
 
 def run_algorithm_comparison(matrix_files: List[str]) -> Dict[str, Dict[int, Any]]:
     """Run all algorithms on given matrix files and collect results."""
@@ -77,15 +87,15 @@ def run_algorithm_comparison(matrix_files: List[str]) -> Dict[str, Dict[int, Any
         
         # Run RRNN
         rrnn = RepeatedRandomNN(matrix)
-        rrnn_result, rrnn_wall, rrnn_cpu = rrnn.solve(k=3, num_repeats=10)
+        rrnn_result, rrnn_wall, rrnn_cpu = rrnn.solve()  # Use auto-tuned parameters
         results['RRNN'][n]['times'].append(rrnn_wall)
         results['RRNN'][n]['cpu_times'].append(rrnn_cpu)
         results['RRNN'][n]['costs'].append(rrnn_result[1])
         results['RRNN'][n]['nodes_expanded'].append(0)
         print(f"RRNN      Score: {rrnn_result[1]:.2f} | Wall: {rrnn_wall:.6f}s | CPU: {rrnn_cpu:.6f}s")
         
-        # Run A* for all matrices up to 15 cities
-        if n <= 15:
+        # Run A* for all matrices up to 10 cities (CLI limit)
+        if n <= 10:
             try:
                 astar = AStarTSP(matrix)
                 astar_result, astar_wall, astar_cpu = astar.solve()
@@ -109,7 +119,7 @@ def run_algorithm_comparison(matrix_files: List[str]) -> Dict[str, Dict[int, Any
 
         # Run Simulated Annealing
         sa = SimulatedAnnealing(matrix)
-        sa_result, sa_wall, sa_cpu = sa.solve()
+        sa_result, sa_wall, sa_cpu = sa.solve()  # Use improved default parameters
         results['Simulated Annealing'][n]['times'].append(sa_wall)
         results['Simulated Annealing'][n]['cpu_times'].append(sa_cpu)
         results['Simulated Annealing'][n]['costs'].append(sa_result[1])
@@ -118,7 +128,7 @@ def run_algorithm_comparison(matrix_files: List[str]) -> Dict[str, Dict[int, Any
 
         # Run Genetic Algorithm
         ga = GeneticAlgorithm(matrix)
-        ga_result, ga_wall, ga_cpu = ga.solve()
+        ga_result, ga_wall, ga_cpu = ga.solve()  # Use improved default parameters
         results['Genetic'][n]['times'].append(ga_wall)
         results['Genetic'][n]['cpu_times'].append(ga_cpu)
         results['Genetic'][n]['costs'].append(ga_result[1])
@@ -127,134 +137,129 @@ def run_algorithm_comparison(matrix_files: List[str]) -> Dict[str, Dict[int, Any
     
     return results
 
-def generate_plots(results: Dict[str, Dict[int, Any]]):
-    """Generate and save all required plots."""
-    os.makedirs('plots', exist_ok=True)
-    
-    # Get all problem sizes
-    sizes = sorted(list({n for algo in results.values() for n in algo.keys()}))
-    
-    # 1. Runtime comparison
-    plt.figure(figsize=(10, 6))
+
+
+def filter_results_by_sizes(results, target_sizes):
+    """Filter results dictionary to only include specified sizes."""
+    filtered_results = {}
     for algo in results:
-        times = [np.median(results[algo][n]['cpu_times']) if n in results[algo] else np.nan 
-                for n in sizes]
-        plt.plot(sizes, times, 'o-', label=algo)
-    plt.xlabel('Number of Cities')
-    plt.ylabel('CPU Time (seconds)')
-    plt.title('Algorithm Runtime Comparison')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig('plots/runtime_comparison.png')
-    plt.close()
-    
-    # 2. Solution quality comparison
-    plt.figure(figsize=(10, 6))
-    for algo in results:
-        costs = [np.median(results[algo][n]['costs']) if n in results[algo] else np.nan 
-                for n in sizes]
-        plt.plot(sizes, costs, 'o-', label=algo)
-    plt.xlabel('Number of Cities')
-    plt.ylabel('Solution Cost')
-    plt.title('Solution Quality Comparison')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig('plots/solution_quality.png')
-    plt.close()
-    
-    # 3. A* nodes expanded (if available)
-    astar_sizes = sorted(results['A*'].keys())
-    if astar_sizes:
-        nodes = [np.median(results['A*'][n]['nodes_expanded']) for n in astar_sizes]
-        plt.figure(figsize=(10, 6))
-        plt.plot(astar_sizes, nodes, 'ro-')
-        plt.xlabel('Number of Cities')
-        plt.ylabel('Nodes Expanded')
-        plt.title('A* Search Space Growth')
-        plt.grid(True)
-        plt.savefig('plots/astar_nodes.png')
-        plt.close()
+        filtered_results[algo] = {}
+        for size in target_sizes:
+            if size in results[algo]:
+                filtered_results[algo][size] = results[algo][size]
+    return filtered_results
 
 def main():
     """Main execution function."""
     print("=== TSP Algorithm Comparison ===")
     import random
     matrix_dir = "mats_911"
+    
+    # Run on requested sizes: 5,6,7,8,9,10,15,20,25,30
+    target_sizes = [5, 6, 7, 8, 9, 10, 15, 20, 25, 30]
+    
+    # Find all available files
     all_files = [f for f in os.listdir(matrix_dir) if f.endswith('.txt')]
-    def get_matrix_size(filename):
+    
+    def get_matrix_info(filename):
         try:
-            prefix = filename.split('_')[0]
-            return int(prefix)
+            parts = filename.split('_')
+            size = int(parts[0])
+            if len(parts) >= 4 and parts[1] == 'random':
+                version = int(parts[4].split('.')[0])  # Extract version number
+                return size, version
+            elif len(parts) >= 3 and parts[1] == 'n' and parts[2] == 'gon':
+                return size, 0  # n-gon matrices get version 0
         except (ValueError, IndexError):
-            return None
-    above_15 = [f for f in all_files if (get_matrix_size(f) is not None and get_matrix_size(f) > 15)]
-    between_10_15 = [f for f in all_files if (get_matrix_size(f) is not None and 10 <= get_matrix_size(f) <= 15)]
-    below_10 = [f for f in all_files if (get_matrix_size(f) is not None and get_matrix_size(f) < 10)]
-    selected = []
-    selected += random.sample(above_15, min(2, len(above_15)))
-    selected += random.sample(between_10_15, min(2, len(between_10_15)))
-    remaining = 10 - len(selected)
-    selected += random.sample(below_10, min(remaining, len(below_10)))
-    matrix_files = [os.path.join(matrix_dir, f) for f in selected]
+            pass
+        return None, None
+    
+    # Group files by size
+    files_by_size = {}
+    for file in all_files:
+        size, version = get_matrix_info(file)
+        if size is not None and version is not None:
+            if size not in files_by_size:
+                files_by_size[size] = []
+            files_by_size[size].append(file)
+    
+    # Select one random matrix for each target size
+    selected_files = []
+    for size in target_sizes:
+        if size in files_by_size and files_by_size[size]:
+            chosen_file = random.choice(files_by_size[size])
+            selected_files.append(chosen_file)
+            print(f"Selected for size {size}: {chosen_file}")
+        else:
+            print(f"Warning: No files found for size {size}")
+    
+    matrix_files = [os.path.join(matrix_dir, f) for f in selected_files]
     if not matrix_files:
         print("No test files found!")
         return
     results = run_algorithm_comparison(matrix_files)
     os.makedirs('plots', exist_ok=True)
 
-    # PART I: Nearest Neighbor Algorithms
-    # Example hyperparameter values (replace with actual experiment data if available)
-    k_values = [1, 2, 3, 5, 7, 10]
-    rrnn_k_costs = [np.median([2.8, 2.5, 2.4, 2.5, 2.7, 2.9])] * len(k_values)  # Placeholder
-    plot_rrnn_k_parameter(k_values, rrnn_k_costs, 'plots/Plot_part1_1.png')
+    # Filter results for different plot parts based on requirements
+    
+    # Part 1: multiples of 5
+    results_part1 = filter_results_by_sizes(results, [5, 10, 15, 20, 25, 30])
+    
+    # Part 2 & 3: A* comparison sizes 
+    results_astar = filter_results_by_sizes(results, [5, 6, 7, 8, 9, 10])
 
-    num_repeats_values = [1, 5, 10, 20, 50]
-    rrnn_repeats_costs = [np.median([2.8, 2.5, 2.4, 2.5, 2.7])] * len(num_repeats_values)  # Placeholder
-    plot_rrnn_repeats_parameter(num_repeats_values, rrnn_repeats_costs, 'plots/Plot_part1_2.png')
+    # ================================================================
+    # GENERATE REQUIRED PLOTS FOR ASSIGNMENT
+    # ================================================================
+    
+    # Part 1: NN algorithms comparison plots (sizes 5,10,15,20,25,30)
+    print("\nGenerating Part 1: NN algorithms comparison plots...")
+    plot_nn_algorithms_wall_time(results_part1, 'plots/nn_algorithms_wall_time.png')
+    plot_nn_algorithms_cpu_time(results_part1, 'plots/nn_algorithms_cpu_time.png')
+    plot_nn_algorithms_cost(results_part1, 'plots/nn_algorithms_cost.png')
+    print(f"  ✓ Generated 3 NN comparison plots for sizes: {sorted(results_part1.get('NN', {}).keys())}")
 
-    plot_nn_algorithms_wall_time(results, 'plots/Plot_part1_3.png')
-    plot_nn_algorithms_cpu_time(results, 'plots/Plot_part1_4.png')
-    plot_nn_algorithms_cost(results, 'plots/Plot_part1_5.png')
+    # Part 2: A* comparison plots (sizes 5-10)
+    print("\nGenerating Part 2: A* comparison plots...")
+    plot_relative_wall_time_with_nodes(results_astar, 'plots/astar_wall_time_comparison.png')
+    plot_relative_cpu_time_with_nodes(results_astar, 'plots/astar_cpu_time_comparison.png')
+    plot_relative_cost_with_nodes(results_astar, 'plots/astar_solution_quality_comparison.png')
+    plot_astar_nodes_expanded(results_astar, 'plots/astar_nodes_expanded.png')
+    print(f"  ✓ Generated 4 A* comparison plots for sizes: {sorted(results_astar.get('A*', {}).keys())}")
 
-    # PART II: A* Algorithm
-    plot_relative_wall_time_with_nodes(results, 'plots/Plot_part2_1.png')
-    plot_relative_cpu_time_with_nodes(results, 'plots/Plot_part2_2.png')
-    plot_relative_cost_with_nodes(results, 'plots/Plot_part2_3.png')
-    plot_astar_nodes_expanded(results, 'plots/Plot_part2_4.png')
-
-    # PART III: Local Search Algorithms
-    # Example hyperparameter values (replace with actual experiment data if available)
-    num_restarts_values = [1, 3, 5, 10, 20]
-    hc_costs = [np.median([2.8, 2.5, 2.4, 2.5, 2.7])] * len(num_restarts_values)  # Placeholder
-    plot_hc_hyperparameter(num_restarts_values, hc_costs, 'plots/Plot_part3_1.png')
-
-    sa_param_name = 'alpha'
-    sa_param_values = [0.8, 0.9, 0.95, 0.99]
-    sa_costs = [np.median([2.8, 2.5, 2.4, 2.5])] * len(sa_param_values)  # Placeholder
-    plot_sa_hyperparameter(sa_param_name, sa_param_values, sa_costs, 'plots/Plot_part3_2.png')
-
-    ga_param_name = 'mutation_rate'
-    ga_param_values = [0.01, 0.05, 0.1, 0.2]
-    ga_costs = [np.median([2.8, 2.5, 2.4, 2.5])] * len(ga_param_values)  # Placeholder
-    plot_ga_hyperparameter(ga_param_name, ga_param_values, ga_costs, 'plots/Plot_part3_3.png')
-
-    # Convergence plots (replace with actual convergence data if available)
-    iterations = list(range(1, 21))
-    hc_convergence = [10 - 0.2*i for i in iterations]  # Placeholder
-    plot_hc_convergence(iterations, hc_convergence, 'plots/Plot_part3_4.png')
-
-    sa_convergence = [10 - 0.15*i for i in iterations]  # Placeholder
-    plot_sa_convergence(iterations, sa_convergence, 'plots/Plot_part3_5.png')
-
-    generations = list(range(1, 21))
-    ga_convergence = [10 - 0.1*i for i in generations]  # Placeholder
-    plot_ga_convergence(generations, ga_convergence, 'plots/Plot_part3_6.png')
-
-    plot_local_search_relative_wall_time(results, 'plots/Plot_part3_7.png')
-    plot_local_search_relative_cpu_time(results, 'plots/Plot_part3_8.png')
-    plot_local_search_relative_cost(results, 'plots/Plot_part3_9.png')
+    # Part 3: Local Search algorithms comparison plots (sizes 5-10 relative to A*)
+    print("\nGenerating Part 3: Local Search algorithms comparison plots...")
+    plot_local_search_relative_wall_time(results_astar, 'plots/local_search_wall_time.png')
+    plot_local_search_relative_cpu_time(results_astar, 'plots/local_search_cpu_time.png')
+    plot_local_search_relative_cost(results_astar, 'plots/local_search_cost.png')
+    print(f"  ✓ Generated 3 Local Search comparison plots for sizes: {sorted(results_astar.get('Hill Climbing', {}).keys())}")
+    
+    print(f"\n🎉 All 10 required plots generated successfully!")
 
     print("\nExecution completed. Check 'plots' directory for visualizations.")
+    
+    # # Extra Credit: Solve 500-city TSP matrix
+    # print("\n" + "="*60)
+    # print("EXTRA CREDIT: 500-City TSP Solution")
+    # print("="*60)
+    
+    # extra_credit_file = os.path.join(matrix_dir, "extra_credit.txt")
+    # if os.path.exists(extra_credit_file):
+    #     print(f"Loading extra credit matrix: {os.path.basename(extra_credit_file)}")
+    #     extra_matrix = load_matrix(extra_credit_file)
+    #     n_cities = len(extra_matrix)
+    #     print(f"Matrix size: {n_cities}x{n_cities} cities")
+        
+    #     print(f"\nRunning algorithms on {n_cities}-city TSP:")
+        
+    #     # Run NN-2Opt (best balance of speed and quality)
+    #     print("Running NN-2Opt (recommended for large instances)...")
+    #     nn2opt = NearestNeighbor2Opt(extra_matrix)
+    #     nn2opt_result, nn2opt_wall, nn2opt_cpu = nn2opt.solve()
+    #     print(f"NN-2Opt Score: {nn2opt_result[1]:.2f} | Wall: {nn2opt_wall:.6f}s | CPU: {nn2opt_cpu:.6f}s")
+    #     print(f"NN-2Opt Path: {' -> '.join(map(str, nn2opt_result[0]))}")
+        
+    #     print(f"Extra credit file not found: {extra_credit_file}")
 
 if __name__ == "__main__":
     main()

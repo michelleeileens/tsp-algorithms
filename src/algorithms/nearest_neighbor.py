@@ -144,7 +144,7 @@ class RepeatedRandomNN:
         return path, total_cost
     
     @time_tracked
-    def solve(self, k: int = 3, num_repeats: int = 30, start_city: int = 0) -> Tuple[List[int], float]:
+    def solve(self, k: int = 3, num_repeats: int = 50, start_city: int = 0) -> Tuple[List[int], float]:
         """
         Solve TSP using Repeated Random Nearest Neighbor.
         Args:

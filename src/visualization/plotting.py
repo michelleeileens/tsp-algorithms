@@ -40,28 +40,136 @@ def _safe_median(data):
 
 # PART I: NEAREST NEIGHBOR ALGORITHMS (3 required plots + 2 unused parameter plots)
 
-# UNUSED PARAMETER TUNING PLOTS (commented out - available for detailed analysis)
-# def plot_rrnn_k_parameter(k_values, median_costs, output_path):
-#     """Plot RRNN solution cost vs k parameter."""
-#     _setup_plot()
-#     plt.plot(k_values, median_costs, color=_algo_colors['RRNN'], marker=_algo_markers['RRNN'])
-#     plt.xlabel('k Parameter')
-#     plt.ylabel('Median Solution Cost')
-#     plt.title('RRNN: Effect of k Parameter on Solution Quality')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
+# RRNN HYPERPARAMETER OPTIMIZATION PLOTS
+def plot_rrnn_k_parameter(k_results, output_path):
+    """Plot RRNN solution cost vs k parameter."""
+    _setup_plot(figsize=(10, 6))
+    
+    k_values = sorted(k_results.keys())
+    k_scores = [k_results[k] for k in k_values]
+    
+    plt.plot(k_values, k_scores, linewidth=2, markersize=8, 
+             color=_algo_colors['RRNN'], marker=_algo_markers['RRNN'])
+    plt.xlabel('k (Number of Nearest Neighbors)')
+    plt.ylabel('Median Solution Cost')
+    plt.title('RRNN: Effect of k Parameter on Solution Quality')
+    plt.grid(True, alpha=0.3)
+    plt.xticks(k_values)
+    
+    # UNCOMMENT TO HIGHLIGHT OPTIMAL K VALUE
+    # optimal_k = min(k_results.keys(), key=lambda x: k_results[x])
+    # optimal_k_score = k_results[optimal_k]
+    # plt.plot(optimal_k, optimal_k_score, 'ro', markersize=12, 
+    #          markerfacecolor='red', markeredgecolor='darkred', linewidth=2)
+    # plt.annotate(f'Optimal k={optimal_k}\nScore={optimal_k_score:.4f}', 
+    #             xy=(optimal_k, optimal_k_score), 
+    #             xytext=(optimal_k+0.3, optimal_k_score+0.05),
+    #             arrowprops=dict(arrowstyle='->', color='red', lw=1.5),
+    #             fontsize=10, ha='left', color='red', fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
 
-# def plot_rrnn_repeats_parameter(num_repeats_values, median_costs, output_path):
-#     """Plot RRNN solution cost vs num_repeats parameter."""
-#     _setup_plot()
-#     plt.plot(num_repeats_values, median_costs, color=_algo_colors['RRNN'], marker=_algo_markers['RRNN'])
-#     plt.xlabel('num_repeats Parameter')
-#     plt.ylabel('Median Solution Cost')
-#     plt.title('RRNN: Effect of num_repeats on Solution Quality')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
+def plot_rrnn_repeats_parameter(repeats_results, output_path):
+    """Plot RRNN solution cost vs num_repeats parameter."""
+    _setup_plot(figsize=(10, 6))
+    
+    num_repeats_values = sorted(repeats_results.keys())
+    repeats_scores = [repeats_results[r] for r in num_repeats_values]
+    
+    plt.plot(num_repeats_values, repeats_scores, linewidth=2, markersize=8, 
+             color=_algo_colors['RRNN'], marker=_algo_markers['RRNN'])
+    plt.xlabel('Number of Repeats')
+    plt.ylabel('Median Solution Cost')
+    plt.title('RRNN: Effect of num_repeats Parameter on Solution Quality')
+    plt.grid(True, alpha=0.3)
+    
+    # UNCOMMENT TO HIGHLIGHT OPTIMAL NUM_REPEATS VALUE
+    # optimal_repeats = _find_optimal_repeats(repeats_results)
+    # optimal_repeats_score = repeats_results[optimal_repeats]
+    # plt.plot(optimal_repeats, optimal_repeats_score, 'ro', markersize=12, 
+    #          markerfacecolor='red', markeredgecolor='darkred', linewidth=2)
+    # plt.annotate(f'Optimal repeats={optimal_repeats}\nScore={optimal_repeats_score:.4f}', 
+    #             xy=(optimal_repeats, optimal_repeats_score), 
+    #             xytext=(optimal_repeats+5, optimal_repeats_score+0.05),
+    #             arrowprops=dict(arrowstyle='->', color='red', lw=1.5),
+    #             fontsize=10, ha='left', color='red', fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+
+def plot_rrnn_hyperparameter_combined(k_results, repeats_results, output_path):
+    """Create combined plot showing both k and num_repeats optimization results."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    
+    # Plot 1: k vs median score
+    k_values = sorted(k_results.keys())
+    k_scores = [k_results[k] for k in k_values]
+    ax1.plot(k_values, k_scores, 'bo-', linewidth=2, markersize=8)
+    ax1.set_xlabel('k (Number of Nearest Neighbors)', fontsize=12)
+    ax1.set_ylabel('Median Score (Distance)', fontsize=12)
+    ax1.set_title('RRNN: k Parameter vs Median Score', fontsize=14, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xticks(k_values)
+    
+    # UNCOMMENT TO HIGHLIGHT OPTIMAL K VALUE
+    # optimal_k = min(k_results.keys(), key=lambda x: k_results[x])
+    # optimal_k_score = k_results[optimal_k]
+    # ax1.plot(optimal_k, optimal_k_score, 'ro', markersize=12, 
+    #          markerfacecolor='red', markeredgecolor='darkred', linewidth=2)
+    # ax1.annotate(f'Optimal k={optimal_k}\nScore={optimal_k_score:.4f}', 
+    #             xy=(optimal_k, optimal_k_score), 
+    #             xytext=(optimal_k+0.3, optimal_k_score+0.1),
+    #             arrowprops=dict(arrowstyle='->', color='red', lw=1.5),
+    #             fontsize=10, ha='left', color='red', fontweight='bold')
+    
+    # Plot 2: num_repeats vs median score
+    num_repeats_values = sorted(repeats_results.keys())
+    repeats_scores = [repeats_results[r] for r in num_repeats_values]
+    ax2.plot(num_repeats_values, repeats_scores, 'go-', linewidth=2, markersize=8)
+    ax2.set_xlabel('Number of Repeats', fontsize=12)
+    ax2.set_ylabel('Median Score (Distance)', fontsize=12)
+    ax2.set_title('RRNN: num_repeats Parameter vs Median Score', fontsize=14, fontweight='bold')
+    ax2.grid(True, alpha=0.3)
+    
+    # UNCOMMENT TO HIGHLIGHT OPTIMAL NUM_REPEATS VALUE
+    # optimal_repeats = _find_optimal_repeats(repeats_results)
+    # optimal_repeats_score = repeats_results[optimal_repeats]
+    # ax2.plot(optimal_repeats, optimal_repeats_score, 'ro', markersize=12, 
+    #          markerfacecolor='red', markeredgecolor='darkred', linewidth=2)
+    # ax2.annotate(f'Optimal repeats={optimal_repeats}\nScore={optimal_repeats_score:.4f}', 
+    #             xy=(optimal_repeats, optimal_repeats_score), 
+    #             xytext=(optimal_repeats+10, optimal_repeats_score+0.05),
+    #             arrowprops=dict(arrowstyle='->', color='red', lw=1.5),
+    #             fontsize=10, ha='left', color='red', fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+
+def _find_optimal_repeats(repeats_results):
+    """Find optimal num_repeats considering diminishing returns"""
+    sorted_results = sorted(repeats_results.items())
+    
+    # Look for the point where improvement becomes minimal (< 1% improvement)
+    for i in range(1, len(sorted_results)):
+        current_repeats, current_score = sorted_results[i]
+        prev_repeats, prev_score = sorted_results[i-1]
+        
+        # Calculate improvement percentage
+        improvement = ((prev_score - current_score) / prev_score) * 100
+        
+        # If improvement is less than 1%, consider the previous point optimal
+        if improvement < 1.0:
+            return prev_repeats
+    
+    # If we never find diminishing returns, return the best performing one
+    return min(repeats_results.keys(), key=lambda x: repeats_results[x])
+
+# UNUSED PARAMETER TUNING PLOTS (commented out - available for detailed analysis)
+
 
 def plot_nn_algorithms_wall_time(results, output_path):
     """Compare wall time for NN, NN-2Opt, RRNN across problem sizes."""
@@ -255,71 +363,38 @@ def plot_astar_nodes_expanded(results, output_path):
 # PART III: LOCAL SEARCH ALGORITHMS (3 required plots + 6 unused analysis plots)
 
 # UNUSED HYPERPARAMETER TUNING AND CONVERGENCE PLOTS (commented out - available for detailed analysis)
-# def plot_hc_hyperparameter(num_restarts_values, median_costs, output_path):
-#     """Plot Hill Climbing solution cost vs num_restarts parameter."""
-#     _setup_plot()
-#     plt.plot(num_restarts_values, median_costs, color=_algo_colors['Hill Climbing'], marker=_algo_markers['Hill Climbing'])
-#     plt.xlabel('num_restarts Parameter')
-#     plt.ylabel('Median Solution Cost')
-#     plt.title('Hill Climbing: Effect of num_restarts on Solution Quality')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
+def plot_hc_hyperparameter(num_restarts_values, median_costs, output_path):
+    """Plot Hill Climbing solution cost vs num_restarts parameter."""
+    _setup_plot()
+    plt.plot(num_restarts_values, median_costs, color=_algo_colors['Hill Climbing'], marker=_algo_markers['Hill Climbing'])
+    plt.xlabel('num_restarts Parameter')
+    plt.ylabel('Median Solution Cost')
+    plt.title('Hill Climbing: Effect of num_restarts on Solution Quality')
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
 
-# def plot_sa_hyperparameter(param_name, param_values, median_costs, output_path):
-#     """Plot Simulated Annealing solution cost vs hyperparameter."""
-#     _setup_plot()
-#     plt.plot(param_values, median_costs, color=_algo_colors['Simulated Annealing'], marker=_algo_markers['Simulated Annealing'])
-#     plt.xlabel(f'{param_name} Parameter')
-#     plt.ylabel('Median Solution Cost')
-#     plt.title(f'Simulated Annealing: Effect of {param_name} on Solution Quality')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
+def plot_sa_hyperparameter(param_name, param_values, median_costs, output_path):
+    """Plot Simulated Annealing solution cost vs hyperparameter."""
+    _setup_plot()
+    plt.plot(param_values, median_costs, color=_algo_colors['Simulated Annealing'], marker=_algo_markers['Simulated Annealing'])
+    plt.xlabel(f'{param_name} Parameter')
+    plt.ylabel('Median Solution Cost')
+    plt.title(f'Simulated Annealing: Effect of {param_name} on Solution Quality')
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
 
-# def plot_ga_hyperparameter(param_name, param_values, median_costs, output_path):
-#     """Plot Genetic Algorithm solution cost vs hyperparameter."""
-#     _setup_plot()
-#     plt.plot(param_values, median_costs, color=_algo_colors['Genetic'], marker=_algo_markers['Genetic'])
-#     plt.xlabel(f'{param_name} Parameter')
-#     plt.ylabel('Median Solution Cost')
-#     plt.title(f'Genetic Algorithm: Effect of {param_name} on Solution Quality')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
-
-# def plot_hc_convergence(iterations, best_costs_over_time, output_path):
-#     """Plot Hill Climbing convergence over iterations."""
-#     _setup_plot()
-#     plt.plot(iterations, best_costs_over_time, color=_algo_colors['Hill Climbing'])
-#     plt.xlabel('Iterations')
-#     plt.ylabel('Best Solution Cost')
-#     plt.title('Hill Climbing: Convergence Over Time')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
-
-# def plot_sa_convergence(iterations, best_costs_over_time, output_path):
-#     """Plot Simulated Annealing convergence over iterations."""
-#     _setup_plot()
-#     plt.plot(iterations, best_costs_over_time, color=_algo_colors['Simulated Annealing'])
-#     plt.xlabel('Iterations')
-#     plt.ylabel('Best Solution Cost')
-#     plt.title('Simulated Annealing: Convergence Over Time')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
-
-# def plot_ga_convergence(generations, best_costs_over_time, output_path):
-#     """Plot Genetic Algorithm convergence over generations."""
-#     _setup_plot()
-#     plt.plot(generations, best_costs_over_time, color=_algo_colors['Genetic'])
-#     plt.xlabel('Generations')
-#     plt.ylabel('Best Solution Cost')
-#     plt.title('Genetic Algorithm: Convergence Over Time')
-#     plt.tight_layout()
-#     plt.savefig(output_path, dpi=300)
-#     plt.close()
+def plot_ga_hyperparameter(param_name, param_values, median_costs, output_path):
+    """Plot Genetic Algorithm solution cost vs hyperparameter."""
+    _setup_plot()
+    plt.plot(param_values, median_costs, color=_algo_colors['Genetic'], marker=_algo_markers['Genetic'])
+    plt.xlabel(f'{param_name} Parameter')
+    plt.ylabel('Median Solution Cost')
+    plt.title(f'Genetic Algorithm: Effect of {param_name} on Solution Quality')
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300)
+    plt.close()
 
 def plot_sa_hyperparameter(param_name, param_values, median_costs, output_path):
     """Plot Simulated Annealing solution cost vs hyperparameter."""

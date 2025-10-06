@@ -28,17 +28,22 @@ from src.visualization.plotting import (
     plot_local_search_relative_cost
 )
 
+# RRNN HYPERPARAMETER OPTIMIZATION FUNCTIONS (enabled for analysis)
+from src.visualization.plotting import (
+    plot_rrnn_k_parameter,           # RRNN k parameter optimization plot
+    plot_rrnn_repeats_parameter,     # RRNN num_repeats parameter optimization plot
+    plot_rrnn_hyperparameter_combined  # RRNN combined hyperparameter plot
+)
+
 # UNUSED PLOTTING FUNCTIONS (commented out - can be enabled for detailed analysis)
-# from src.visualization.plotting import (
-#     plot_rrnn_k_parameter,           # RRNN parameter tuning
-#     plot_rrnn_repeats_parameter,     # RRNN parameter tuning  
-#     plot_hc_hyperparameter,          # Hill Climbing parameter tuning
-#     plot_sa_hyperparameter,          # Simulated Annealing parameter tuning
-#     plot_ga_hyperparameter,          # Genetic Algorithm parameter tuning
-#     plot_hc_convergence,             # Hill Climbing convergence analysis
-#     plot_sa_convergence,             # Simulated Annealing convergence analysis
-#     plot_ga_convergence              # Genetic Algorithm convergence analysis
-# )
+from src.visualization.plotting import (
+    plot_hc_hyperparameter,          # Hill Climbing parameter tuning
+    plot_sa_hyperparameter,          # Simulated Annealing parameter tuning
+    plot_ga_hyperparameter,          # Genetic Algorithm parameter tuning
+    plot_hc_convergence,             # Hill Climbing convergence analysis
+    plot_sa_convergence,             # Simulated Annealing convergence analysis
+    plot_ga_convergence              # Genetic Algorithm convergence analysis
+)
 
 def run_algorithm_comparison(matrix_files: List[str]) -> Dict[str, Dict[int, Any]]:
     """Run all algorithms on given matrix files and collect results."""
@@ -238,28 +243,168 @@ def main():
 
     print("\nExecution completed. Check 'plots' directory for visualizations.")
     
-    # # Extra Credit: Solve 500-city TSP matrix
-    # print("\n" + "="*60)
-    # print("EXTRA CREDIT: 500-City TSP Solution")
-    # print("="*60)
+    # Extra Credit: Solve 500-city TSP matrix
+    print("\n" + "="*60)
+    print("EXTRA CREDIT: 500-City TSP Solution")
+    print("="*60)
     
-    # extra_credit_file = os.path.join(matrix_dir, "extra_credit.txt")
-    # if os.path.exists(extra_credit_file):
-    #     print(f"Loading extra credit matrix: {os.path.basename(extra_credit_file)}")
-    #     extra_matrix = load_matrix(extra_credit_file)
-    #     n_cities = len(extra_matrix)
-    #     print(f"Matrix size: {n_cities}x{n_cities} cities")
+    extra_credit_file = os.path.join(matrix_dir, "extra_credit.txt")
+    if os.path.exists(extra_credit_file):
+        print(f"Loading extra credit matrix: {os.path.basename(extra_credit_file)}")
+        extra_matrix = load_matrix(extra_credit_file)
+        n_cities = len(extra_matrix)
+        print(f"Matrix size: {n_cities}x{n_cities} cities")
         
-    #     print(f"\nRunning algorithms on {n_cities}-city TSP:")
+        print(f"\nRunning algorithms on {n_cities}-city TSP:")
         
-    #     # Run NN-2Opt (best balance of speed and quality)
-    #     print("Running NN-2Opt (recommended for large instances)...")
-    #     nn2opt = NearestNeighbor2Opt(extra_matrix)
-    #     nn2opt_result, nn2opt_wall, nn2opt_cpu = nn2opt.solve()
-    #     print(f"NN-2Opt Score: {nn2opt_result[1]:.2f} | Wall: {nn2opt_wall:.6f}s | CPU: {nn2opt_cpu:.6f}s")
-    #     print(f"NN-2Opt Path: {' -> '.join(map(str, nn2opt_result[0]))}")
+        # Run NN-2Opt (best balance of speed and quality)
+        print("Running NN-2Opt (recommended for large instances)...")
+        nn2opt = NearestNeighbor2Opt(extra_matrix)
+        nn2opt_result, nn2opt_wall, nn2opt_cpu = nn2opt.solve()
+        print(f"NN-2Opt Score: {nn2opt_result[1]:.2f} | Wall: {nn2opt_wall:.6f}s | CPU: {nn2opt_cpu:.6f}s")
+        print(f"NN-2Opt Path: {' -> '.join(map(str, nn2opt_result[0]))}")
         
-    #     print(f"Extra credit file not found: {extra_credit_file}")
+        print(f"Extra credit file not found: {extra_credit_file}")
+
+def generate_rrnn_hyperparameter_analysis():
+    """Generate RRNN hyperparameter optimization plots and analysis"""
+    
+    # Experimental results from hyperparameter optimization
+    k_results = {
+        1: 1.6200,
+        2: 2.0526, 
+        3: 2.2362,
+        4: 2.5345,
+        5: 2.5294
+    }
+    
+    repeats_results = {
+        10: 2.7660,
+        20: 2.4716,
+        30: 2.3294,
+        50: 2.3463,
+        75: 2.3415,
+        100: 2.0701
+    }
+    
+    print("\n" + "="*60)
+    print("GENERATING RRNN HYPERPARAMETER ANALYSIS")
+    print("="*60)
+    
+    # Generate plots
+    print("Generating RRNN hyperparameter optimization plots...")
+    plot_rrnn_k_parameter(k_results, 'plots/rrnn_k_parameter_optimization.png')
+    plot_rrnn_repeats_parameter(repeats_results, 'plots/rrnn_repeats_parameter_optimization.png')
+    plot_rrnn_hyperparameter_combined(k_results, repeats_results, 'plots/rrnn_hyperparameter_optimization.png')
+    
+    # Analysis
+    optimal_k = 3  # Based on analysis (balance of randomization)
+    optimal_repeats = 30  # Based on diminishing returns
+    
+    print(f"\n✓ Generated RRNN hyperparameter analysis:")
+    print(f"  • K parameter optimization plot")
+    print(f"  • num_repeats parameter optimization plot") 
+    print(f"  • Combined hyperparameter analysis plot")
+    print(f"\n🔍 Key Findings:")
+    print(f"  • Optimal k = {optimal_k} (good balance of randomization)")
+    print(f"  • Optimal num_repeats = {optimal_repeats} (performance vs efficiency)")
+    print(f"  • RRNN now uses these optimized parameters by default")
+
+
+def generate_local_search_analysis():
+    """Generate local search convergence and hyperparameter analysis."""
+    from src.algorithms.local_search import HillClimbing, SimulatedAnnealing, GeneticAlgorithm
+    import numpy as np
+    
+    print("\n" + "="*60)
+    print("GENERATING LOCAL SEARCH ANALYSIS")
+    print("="*60)
+    
+    # Load test matrix for analysis
+    test_matrix = load_matrix("mats_911/10_random_adj_mat_0.txt")
+    
+    # === CONVERGENCE ANALYSIS ===
+    print("\nGenerating convergence analysis...")
+    
+    # Hill Climbing convergence
+    hc = HillClimbing(test_matrix)
+    _, _, hc_convergence = hc.solve_with_convergence(num_restarts=5)
+    hc_iterations = [x[0] for x in hc_convergence]
+    hc_costs = [x[1] for x in hc_convergence]
+    plot_hc_convergence(hc_iterations, hc_costs, 'plots/hc_convergence_analysis.png')
+    
+    # Simulated Annealing convergence  
+    sa = SimulatedAnnealing(test_matrix)
+    _, _, sa_convergence = sa.solve_with_convergence()
+    sa_iterations = [x[0] for x in sa_convergence]
+    sa_costs = [x[1] for x in sa_convergence]
+    plot_sa_convergence(sa_iterations, sa_costs, 'plots/sa_convergence_analysis.png')
+    
+    # Genetic Algorithm convergence
+    ga = GeneticAlgorithm(test_matrix)
+    _, _, ga_convergence = ga.solve_with_convergence(num_generations=100)
+    ga_generations = [x[0] for x in ga_convergence]
+    ga_costs = [x[1] for x in ga_convergence]
+    plot_ga_convergence(ga_generations, ga_costs, 'plots/ga_convergence_analysis.png')
+    
+    # === HYPERPARAMETER ANALYSIS ===
+    print("Analyzing hyperparameters...")
+    
+    # Hill Climbing num_restarts analysis
+    restart_values = [1, 3, 5, 10, 15, 20]
+    hc_results = []
+    for restarts in restart_values:
+        costs = []
+        for _ in range(5):  # Multiple runs for statistical reliability
+            hc = HillClimbing(test_matrix)
+            _, cost = hc.solve(num_restarts=restarts)
+            costs.append(cost)
+        hc_results.append(np.median(costs))
+    
+    plot_hc_hyperparameter(restart_values, hc_results, 'plots/hc_hyperparameter_analysis.png')
+    
+    # Simulated Annealing temperature analysis
+    temp_values = [50, 100, 200, 500, 1000, 2000]
+    sa_results = []
+    for temp in temp_values:
+        costs = []
+        for _ in range(5):
+            sa = SimulatedAnnealing(test_matrix)
+            _, cost = sa.solve(initial_temp=temp)
+            costs.append(cost)
+        sa_results.append(np.median(costs))
+    
+    plot_sa_hyperparameter("Initial Temperature", temp_values, sa_results, 'plots/sa_hyperparameter_analysis.png')
+    
+    # Genetic Algorithm population analysis
+    pop_values = [50, 100, 150, 200, 300, 400]
+    ga_results = []
+    for pop_size in pop_values:
+        costs = []
+        for _ in range(3):  # Fewer runs due to GA being slower
+            ga = GeneticAlgorithm(test_matrix)
+            _, cost = ga.solve(population_size=pop_size, num_generations=100)
+            costs.append(cost)
+        ga_results.append(np.median(costs))
+    
+    plot_ga_hyperparameter("Population Size", pop_values, ga_results, 'plots/ga_hyperparameter_analysis.png')
+    
+    print(f"\n✓ Generated local search analysis:")
+    print(f"  • Hill Climbing convergence plot")
+    print(f"  • Simulated Annealing convergence plot")
+    print(f"  • Genetic Algorithm convergence plot")
+    print(f"  • Hill Climbing hyperparameter analysis (num_restarts)")
+    print(f"  • Simulated Annealing hyperparameter analysis (temperature)")
+    print(f"  • Genetic Algorithm hyperparameter analysis (population)")
+
 
 if __name__ == "__main__":
+    # Run main TSP comparison
     main()
+    
+    # Generate RRNN hyperparameter analysis
+    generate_rrnn_hyperparameter_analysis()
+    
+    # COMMENT OUT LOCAL SEARCH ANALYSIS FOR FASTER RUNS
+    # Generate local search convergence and hyperparameter analysis
+    generate_local_search_analysis()

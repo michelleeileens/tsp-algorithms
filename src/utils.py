@@ -33,25 +33,6 @@ def time_tracked(func):
         return result, wall_time, cpu_time
     return wrapper
 
-def calculate_path_cost(path: List[int], adj_matrix: np.ndarray) -> float:
-    """
-    Calculate the total cost of a path in the TSP.
-    
-    Args:
-        path (List[int]): List of cities in order of visit
-        adj_matrix (np.ndarray): Adjacency matrix with distances
-        
-    Returns:
-        float: Total cost of the path
-    """
-    cost = 0.0
-    for i in range(len(path) - 1):
-        cost += adj_matrix[path[i]][path[i + 1]]
-    # Add cost of returning to start
-    if len(path) > 1:
-        cost += adj_matrix[path[-1]][path[0]]
-    return cost
-
 def validate_tsp_solution(path: List[int], adj_matrix: np.ndarray, reported_cost: float = None) -> dict:
     """
     Comprehensive validation of a TSP solution.

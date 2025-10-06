@@ -4,7 +4,7 @@ import random
 import math
 from src.utils import time_tracked
 
-# ------------------ Hill Climbing ------------------
+
 class HillClimbing:
     def __init__(self, adj_matrix: np.ndarray):
         self.adj_matrix = adj_matrix
@@ -13,6 +13,7 @@ class HillClimbing:
         self.best_cost = float('inf')
 
     def _calculate_tour_cost(self, tour: List[int]) -> float:
+        """Calculate tour cost efficiently."""
         cost = 0
         for i in range(len(tour) - 1):
             cost += self.adj_matrix[tour[i]][tour[i + 1]]
@@ -20,6 +21,7 @@ class HillClimbing:
         return cost
 
     def _generate_neighbors(self, tour: List[int]) -> List[List[int]]:
+        """Generate neighbors using 2-opt swaps."""
         neighbors = []
         for i in range(1, len(tour) - 2):
             for j in range(i + 1, len(tour)):
@@ -31,15 +33,39 @@ class HillClimbing:
         return neighbors
 
     def _generate_random_tour(self) -> List[int]:
+        """Generate a random tour starting from city 0."""
         cities = list(range(1, self.n))
         random.shuffle(cities)
         return [0] + cities
 
     @time_tracked
-    def solve(self, num_restarts: int = 5) -> Tuple[List[int], float]:
-        for _ in range(num_restarts):
+    def solve(self, num_restarts: int = 5, track_convergence: bool = False) -> Tuple[List[int], float]:
+        """
+        Solve TSP using Hill Climbing with multiple random restarts.
+        
+        Args:
+            num_restarts (int): Number of random restarts
+            track_convergence (bool): Whether to track convergence history
+        
+        Returns:
+            Tuple[List[int], float]: Best tour and its cost
+            If track_convergence=True, returns (best_tour, best_cost, convergence_history)
+        """
+        convergence_history = []
+        iteration = 0
+        
+        for restart in range(num_restarts):
             current_tour = self._generate_random_tour()
             current_cost = self._calculate_tour_cost(current_tour)
+            
+            if current_cost < self.best_cost:
+                self.best_solution = current_tour
+                self.best_cost = current_cost
+            
+            if track_convergence:
+                convergence_history.append((iteration, self.best_cost))
+                iteration += 1
+            
             improved = True
             while improved:
                 improved = False
@@ -50,13 +76,66 @@ class HillClimbing:
                         current_tour = neighbor
                         current_cost = neighbor_cost
                         improved = True
+                        
+                        if current_cost < self.best_cost:
+                            self.best_solution = current_tour
+                            self.best_cost = current_cost
+                        
+                        if track_convergence:
+                            convergence_history.append((iteration, self.best_cost))
+                            iteration += 1
                         break
+        
+        if track_convergence:
+            return self.best_solution, self.best_cost, convergence_history
+        return self.best_solution, self.best_cost
+    
+    def solve_with_convergence(self, num_restarts: int = 5) -> Tuple[List[int], float, List[Tuple[int, float]]]:
+        """
+        Solve TSP using Hill Climbing with convergence tracking (no timing decorator).
+        
+        Args:
+            num_restarts (int): Number of random restarts
+        
+        Returns:
+            Tuple[List[int], float, List[Tuple[int, float]]]: Best tour, cost, and convergence history
+        """
+        convergence_history = []
+        iteration = 0
+        
+        for restart in range(num_restarts):
+            current_tour = self._generate_random_tour()
+            current_cost = self._calculate_tour_cost(current_tour)
+            
             if current_cost < self.best_cost:
                 self.best_solution = current_tour
                 self.best_cost = current_cost
-        return self.best_solution, self.best_cost
+            
+            convergence_history.append((iteration, self.best_cost))
+            iteration += 1
+            
+            improved = True
+            while improved:
+                improved = False
+                neighbors = self._generate_neighbors(current_tour)
+                for neighbor in neighbors:
+                    neighbor_cost = self._calculate_tour_cost(neighbor)
+                    if neighbor_cost < current_cost:
+                        current_tour = neighbor
+                        current_cost = neighbor_cost
+                        improved = True
+                        
+                        if current_cost < self.best_cost:
+                            self.best_solution = current_tour
+                            self.best_cost = current_cost
+                        
+                        convergence_history.append((iteration, self.best_cost))
+                        iteration += 1
+                        break
+        
+        return self.best_solution, self.best_cost, convergence_history
 
-# ------------------ Simulated Annealing ------------------
+
 class SimulatedAnnealing:
     def __init__(self, adj_matrix: np.ndarray):
         self.adj_matrix = adj_matrix
@@ -78,7 +157,10 @@ class SimulatedAnnealing:
         # New edges after reversal: (tour[i-1], tour[j]) and (tour[i], tour[j+1])
         
         n = len(tour)
-        prev_i = (i - 1) % n
+        if i > j:
+            i, j = j, i
+
+        prev_i = i - 1
         next_j = (j + 1) % n
         
         # Cost of edges to be removed
@@ -110,8 +192,21 @@ class SimulatedAnnealing:
         return [0] + cities
 
     @time_tracked
-    def solve(self, initial_temp: float = None, alpha: float = 0.99, min_temp: float = 0.01, max_iterations: int = None) -> Tuple[List[int], float]:
-        """Optimized SA solve with efficient neighbor generation and faster convergence."""
+    def solve(self, initial_temp: float = None, alpha: float = 0.99, min_temp: float = 0.01, max_iterations: int = None, track_convergence: bool = False) -> Tuple[List[int], float]:
+        """
+        Optimized SA solve with efficient neighbor generation and faster convergence.
+
+        Args:
+            initial_temp (float): Initial temperature for SA
+            alpha (float): Cooling rate
+            min_temp (float): Minimum temperature
+            max_iterations (int): Maximum iterations per temperature level
+            track_convergence (bool): Whether to track convergence history
+
+        Returns:
+            Tuple[List[int], float]: Best tour and its cost
+            If track_convergence=True, returns (best_tour, best_cost, convergence_history)
+        """
         # Set default parameters as requested
         if initial_temp is None:
             initial_temp = self.n * 50
@@ -126,50 +221,121 @@ class SimulatedAnnealing:
         self.best_solution = current_tour[:]
         self.best_cost = current_cost
         
+        convergence_history = []
+        iteration = 0
+        
+        if track_convergence:
+            convergence_history.append((iteration, self.best_cost))
+        
         temperature = initial_temp
-        iterations_since_improvement = 0
+        no_improve_count = 0
         max_no_improve = self.n * 5  # Early termination
         
         # Main SA loop
-        while temperature > min_temp and iterations_since_improvement < max_no_improve:
-            improved_this_temp = False
+        while temperature > min_temp and no_improve_count < max_no_improve:
+            improved = False
             
             # Fixed number of attempts per temperature level
             for _ in range(max_iterations):
                 # Generate random 2-opt move
-                i, j = random.sample(range(1, self.n), 2)
-                if i > j:
-                    i, j = j, i
-                if j - i < 2:  # Skip moves that don't change the tour
-                    continue
+                # For valid 2-opt: need i < j and j >= i + 2 to avoid adjacent edges
+                if self.n < 4:  # Too small for 2-opt
+                    break
+                    
+                i = random.randint(1, max(1, self.n - 3))  # Ensure valid range
+                j = random.randint(i + 2, self.n - 1)
                 
                 # Calculate cost change efficiently
-                delta_cost = self._calculate_2opt_delta(current_tour, i, j)
+                delta = self._calculate_2opt_delta(current_tour, i, j)
                 
                 # Accept or reject move
-                if (delta_cost < 0 or 
-                    random.random() < self._acceptance_probability(delta_cost, temperature)):
-                    
+                if (delta < 0 or
+                    random.random() < math.exp(-delta / temperature)):
+
                     # Apply move in-place
                     self._apply_2opt_move(current_tour, i, j)
-                    current_cost += delta_cost
+                    current_cost += delta
                     
                     # Update best solution if improved
                     if current_cost < self.best_cost:
                         self.best_solution = current_tour[:]
                         self.best_cost = current_cost
-                        improved_this_temp = True
-                        iterations_since_improvement = 0
-            
+                        improved = True
+                        no_improve_count = 0
+                        
+                        if track_convergence:
+                            iteration += 1
+                            convergence_history.append((iteration, self.best_cost))
+
             # Cool down temperature
             temperature *= alpha
-            
-            if not improved_this_temp:
-                iterations_since_improvement += 1
+
+            if not improved:
+                no_improve_count += 1
         
+        if track_convergence:
+            return self.best_solution, self.best_cost, convergence_history
         return self.best_solution, self.best_cost
     
-# ------------------ Genetic Algorithm ------------------
+    def solve_with_convergence(self, initial_temp: float = None, alpha: float = 0.99, min_temp: float = 0.01, max_iterations: int = None) -> Tuple[List[int], float, List[Tuple[int, float]]]:
+        """
+        Solve TSP using Simulated Annealing with convergence tracking (no timing decorator).
+        """
+        # Set default parameters
+        if initial_temp is None:
+            initial_temp = self.n * 50
+        if max_iterations is None:
+            max_iterations = self.n * 20
+        
+        # Initialize with random tour
+        current_tour = self._generate_initial_tour()
+        current_cost = self._calculate_tour_cost(current_tour)
+        
+        # Track best solution
+        self.best_solution = current_tour[:]
+        self.best_cost = current_cost
+        
+        convergence_history = []
+        iteration = 0
+        convergence_history.append((iteration, self.best_cost))
+        
+        temperature = initial_temp
+        no_improve_count = 0
+        max_no_improve = self.n * 5
+        
+        # Main SA loop
+        while temperature > min_temp and no_improve_count < max_no_improve:
+            improved = False
+            
+            for _ in range(max_iterations):
+                if self.n < 4:
+                    break
+                    
+                i = random.randint(1, max(1, self.n - 3))
+                j = random.randint(i + 2, self.n - 1)
+                
+                delta = self._calculate_2opt_delta(current_tour, i, j)
+                
+                if (delta < 0 or random.random() < math.exp(-delta / temperature)):
+                    self._apply_2opt_move(current_tour, i, j)
+                    current_cost += delta
+                    
+                    if current_cost < self.best_cost:
+                        self.best_solution = current_tour[:]
+                        self.best_cost = current_cost
+                        improved = True
+                        no_improve_count = 0
+                        
+                        iteration += 1
+                        convergence_history.append((iteration, self.best_cost))
+
+            temperature *= alpha
+            if not improved:
+                no_improve_count += 1
+        
+        return self.best_solution, self.best_cost, convergence_history
+    
+
 class GeneticAlgorithm:
     def __init__(self, adj_matrix: np.ndarray):
         self.adj_matrix = adj_matrix
@@ -210,90 +376,44 @@ class GeneticAlgorithm:
         return population
 
     def _order_crossover(self, parent1: List[int], parent2: List[int]) -> List[int]:
-        """
-        Correct Order Crossover (OX) implementation.
-        Maintains city 0 at position 0 and preserves relative order from parents.
-        """
+        """Correct Order Crossover (OX) implementation. Always maintains city 0 at position 0."""
         size = len(parent1)
-        
-        # Ensure parents are valid
-        assert self._validate_tour(parent1), f"Invalid parent1: {parent1}"
-        assert self._validate_tour(parent2), f"Invalid parent2: {parent2}"
         
         # Select crossover points in range [1, size-1] (skip position 0)
         if size <= 2:
             return parent1[:]
         
+        # Select crossover segment (excluding position 0)
         start, end = sorted(random.sample(range(1, size), 2))
-        if start == end:
-            end = min(end + 1, size)
+         # Create child with segment from parent1
+        child = [0] + [-1] * (size - 1)
+        child[start:end] = parent1[start:end]
         
-        # Initialize child
-        child = [0] * size  # Start with city 0 at position 0
+        # Fill remaining positions with cities from parent2 in order
+        used = set(child[start:end])
+        used.add(0)
         
-        # Step 1: Copy segment from parent1 to child
-        for i in range(start, end):
-            child[i] = parent1[i]
+        p2_cities = [city for city in parent2[1:] if city not in used]
         
-        # Step 2: Create list of cities from parent2 in order, excluding those already in child
-        used_cities = set(child[start:end])
-        used_cities.add(0)  # City 0 is always used
+        # Fill positions before and after the segment
+        idx = 0
+        for pos in range(1, size):
+            if child[pos] == -1:
+                child[pos] = p2_cities[idx]
+                idx += 1
         
-        # Get remaining cities from parent2 in their original order
-        remaining_cities = [city for city in parent2 if city not in used_cities]
-        
-        # Step 3: Fill remaining positions in child with cities from remaining_cities
-        fill_idx = 0
-        for i in range(1, size):  # Skip position 0 (always city 0)
-            if i < start or i >= end:  # Position not filled by crossover segment
-                if fill_idx < len(remaining_cities):
-                    child[i] = remaining_cities[fill_idx]
-                    fill_idx += 1
-        
-        # Final validation and repair if needed
-        if not self._validate_tour(child):
-            # Repair tour by ensuring all cities are present exactly once
-            child_cities = set(child[1:])  # Exclude city 0
-            all_cities = set(range(1, self.n))
-            missing = all_cities - child_cities
-            duplicates = []
-            
-            # Find duplicates (excluding city 0)
-            seen = {0}
-            for i in range(1, size):
-                if child[i] in seen:
-                    duplicates.append(i)
-                else:
-                    seen.add(child[i])
-            
-            # Replace duplicates with missing cities
-            missing_list = list(missing)
-            for i, pos in enumerate(duplicates):
-                if i < len(missing_list):
-                    child[pos] = missing_list[i]
-        
-        # Final validation
-        assert self._validate_tour(child), f"Invalid child after crossover: {child}"
         return child
 
     def _mutate(self, tour: List[int], mutation_rate: float) -> List[int]:
-        """
-        Apply 2-opt mutation with controlled probability.
-        Preserves city 0 at position 0.
-        """
+        """Apply 2-opt mutation with given probability."""
         if random.random() > mutation_rate or self.n <= 3:
             return tour[:]
-        
-        tour = tour[:]
-        
-        # Apply 2-opt mutation (reverse a segment)
+                
+        # Perform 2-opt swap (excluding position 0)
         i, j = sorted(random.sample(range(1, len(tour)), 2))
-        if j - i >= 1:  # Ensure meaningful mutation
-            tour[i:j+1] = tour[i:j+1][::-1]
-        
-        # Validate mutated tour
-        assert self._validate_tour(tour), f"Invalid tour after mutation: {tour}"
-        return tour
+        tour_copy = tour[:]
+        tour_copy[i:j+1] = reversed(tour_copy[i:j+1])
+        return tour_copy
 
     def _select_parent(self, population: List[List[int]], costs: List[float]) -> List[int]:
         """Tournament selection with moderate selection pressure."""
@@ -303,7 +423,7 @@ class GeneticAlgorithm:
         return population[winner_idx][:]
 
     @time_tracked
-    def solve(self, population_size: int = 150, num_generations: int = 300, mutation_rate: float = 0.02) -> Tuple[List[int], float]:
+    def solve(self, population_size: int = 150, num_generations: int = 300, mutation_rate: float = 0.02, track_convergence: bool = False) -> Tuple[List[int], float]:
         """
         Solve TSP using Genetic Algorithm with Order Crossover.
         
@@ -311,55 +431,103 @@ class GeneticAlgorithm:
             population_size: Number of individuals in population (default: 150)
             num_generations: Number of generations to evolve (default: 300) 
             mutation_rate: Probability of mutation per individual (default: 0.02)
+            track_convergence (bool): Whether to track convergence history
             
         Returns:
             Tuple[List[int], float]: Best tour and its cost
+            If track_convergence=True, returns (best_tour, best_cost, convergence_history)
         """
-        # Generate initial population
+        # Initialize population
         population = self._generate_initial_population(population_size)
-        
-        # Initialize best solution tracking
         costs = [self._calculate_tour_cost(tour) for tour in population]
-        best_idx = min(range(len(costs)), key=lambda i: costs[i])
+        
+        # Track best solution
+        best_idx = costs.index(min(costs))
         self.best_cost = costs[best_idx]
         self.best_solution = population[best_idx][:]
         
+        convergence_history = []
+        if track_convergence:
+            convergence_history.append((0, self.best_cost))
+        
         # Evolution loop
         for generation in range(num_generations):
-            # Calculate fitness for current population
+            # Update costs
             costs = [self._calculate_tour_cost(tour) for tour in population]
             
-            # Update best solution
-            current_best_idx = min(range(len(costs)), key=lambda i: costs[i])
+            # Track best
+            current_best_idx = costs.index(min(costs))
             if costs[current_best_idx] < self.best_cost:
                 self.best_cost = costs[current_best_idx]
                 self.best_solution = population[current_best_idx][:]
+                
+                if track_convergence:
+                    convergence_history.append((generation + 1, self.best_cost))
             
-            # Create new population
-            # Elitism: Keep top 20% of population
+            # Elitism: keep top 20%
             elite_count = max(1, population_size // 5)
-            sorted_indices = sorted(range(len(costs)), key=lambda i: costs[i])
-            new_population = [population[i][:] for i in sorted_indices[:elite_count]]
+            elite_indices = sorted(range(len(costs)), key=lambda i: costs[i])[:elite_count]
+            new_population = [population[i][:] for i in elite_indices]
             
-            # Generate offspring to fill rest of population
+            # Generate offspring
             while len(new_population) < population_size:
-                # Select parents
                 parent1 = self._select_parent(population, costs)
                 parent2 = self._select_parent(population, costs)
                 
-                # Create offspring through crossover and mutation
                 child = self._order_crossover(parent1, parent2)
                 child = self._mutate(child, mutation_rate)
                 
-                # Validate child before adding to population
-                if self._validate_tour(child):
-                    new_population.append(child)
-                else:
-                    # Fallback: use parent1 if child is invalid
-                    new_population.append(parent1[:])
+                new_population.append(child)
             
             population = new_population
         
-        # Final validation
-        assert self._validate_tour(self.best_solution), f"Invalid final solution: {self.best_solution}"
+        if track_convergence:
+            return self.best_solution, self.best_cost, convergence_history
         return self.best_solution, self.best_cost
+    
+    def solve_with_convergence(self, population_size: int = 150, num_generations: int = 300, mutation_rate: float = 0.02) -> Tuple[List[int], float, List[Tuple[int, float]]]:
+        """
+        Solve TSP using Genetic Algorithm with convergence tracking (no timing decorator).
+        """
+        # Initialize population
+        population = self._generate_initial_population(population_size)
+        costs = [self._calculate_tour_cost(tour) for tour in population]
+        
+        # Track best solution
+        best_idx = costs.index(min(costs))
+        self.best_cost = costs[best_idx]
+        self.best_solution = population[best_idx][:]
+        
+        convergence_history = []
+        convergence_history.append((0, self.best_cost))
+        
+        # Evolution loop
+        for generation in range(num_generations):
+            # Update costs
+            costs = [self._calculate_tour_cost(tour) for tour in population]
+            
+            # Track best
+            current_best_idx = costs.index(min(costs))
+            if costs[current_best_idx] < self.best_cost:
+                self.best_cost = costs[current_best_idx]
+                self.best_solution = population[current_best_idx][:]
+                convergence_history.append((generation + 1, self.best_cost))
+            
+            # Elitism: keep top 20%
+            elite_count = max(1, population_size // 5)
+            elite_indices = sorted(range(len(costs)), key=lambda i: costs[i])[:elite_count]
+            new_population = [population[i][:] for i in elite_indices]
+            
+            # Generate offspring
+            while len(new_population) < population_size:
+                parent1 = self._select_parent(population, costs)
+                parent2 = self._select_parent(population, costs)
+                
+                child = self._order_crossover(parent1, parent2)
+                child = self._mutate(child, mutation_rate)
+                
+                new_population.append(child)
+            
+            population = new_population
+        
+        return self.best_solution, self.best_cost, convergence_history

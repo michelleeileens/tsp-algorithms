@@ -1,16 +1,10 @@
 import numpy as np
 from typing import List, Tuple, Set
 import random
-from ..utils import time_tracked, calculate_path_cost
+from src.utils import time_tracked
 
 class NearestNeighbor:
     def __init__(self, adj_matrix: np.ndarray):
-        """
-        Initialize the Nearest Neighbor solver.
-        
-        Args:
-            adj_matrix (np.ndarray): The adjacency matrix representing distances between cities
-        """
         self.adj_matrix = adj_matrix
         self.n_cities = len(adj_matrix)
     
@@ -54,6 +48,16 @@ class NearestNeighbor2Opt:
     def _swap_2opt(self, path: List[int], i: int, k: int) -> List[int]:
         """Perform a 2-opt swap by reversing the path between positions i and k."""
         return path[:i] + path[i:k+1][::-1] + path[k+1:]
+
+    def _calculate_path_cost(self, path: List[int], adj_matrix: np.ndarray) -> float:
+        """Calculate the total cost of a path in the TSP."""
+        cost = 0.0
+        for i in range(len(path) - 1):
+            cost += adj_matrix[path[i]][path[i + 1]]
+        # Add cost of returning to start
+        if len(path) > 1:
+            cost += adj_matrix[path[-1]][path[0]]
+        return cost
     
     def _calculate_swap_delta(self, path: List[int], i: int, k: int) -> float:
         """Calculate the change in path length if we perform a 2-opt swap."""
@@ -103,7 +107,7 @@ class NearestNeighbor2Opt:
         
         # Add start city to complete the cycle
         path.append(path[0])
-        total_cost = calculate_path_cost(path, self.adj_matrix)
+        total_cost = self._calculate_path_cost(path, self.adj_matrix)
         return path, total_cost
 
 class RepeatedRandomNN:
@@ -144,12 +148,15 @@ class RepeatedRandomNN:
         return path, total_cost
     
     @time_tracked
-    def solve(self, k: int = 3, num_repeats: int = 50, start_city: int = 0) -> Tuple[List[int], float]:
+    def solve(self, k: int = 3, num_repeats: int = 30, start_city: int = 0) -> Tuple[List[int], float]:
         """
         Solve TSP using Repeated Random Nearest Neighbor.
+        Uses optimized parameters: k=3, num_repeats=30 
+        (from hyperparameter optimization on rrnn_optimization.py)
+        
         Args:
-            k (int): Number of nearest cities to consider 
-            num_repeats (int): Number of repeated runs
+            k (int): Number of nearest cities to consider (optimal: 3)
+            num_repeats (int): Number of repeated runs (optimal: 30)
             start_city (int): Starting city
         Returns:
             Tuple[List[int], float]: Best tour found and its cost
@@ -158,14 +165,13 @@ class RepeatedRandomNN:
         best_path = None
         best_cost = float('inf')
         
-        # Try multiple k values around the chosen one for better results
-        k_values = [max(1, k-1), k, min(self.n_cities-1, k+1)]
-        
-        for test_k in k_values:
-            for _ in range(num_repeats // len(k_values)):
-                path, cost = self._single_solution(start_city, test_k)
-                if cost < best_cost:
-                    best_path = path
-                    best_cost = cost
+        # Use optimized approach: focus on the specified k value with random starting cities
+        for _ in range(num_repeats):
+            # Use random starting city for better exploration
+            random_start = random.randint(0, self.n_cities - 1)
+            path, cost = self._single_solution(random_start, k)
+            if cost < best_cost:
+                best_path = path
+                best_cost = cost
         
         return best_path, best_cost

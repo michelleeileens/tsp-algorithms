@@ -2,18 +2,11 @@ import numpy as np
 from typing import List, Tuple, Set, Dict
 from queue import PriorityQueue
 from scipy.sparse.csgraph import minimum_spanning_tree
-from ..utils import time_tracked, calculate_path_cost
+from src.utils import time_tracked
 
 class State:
     def __init__(self, path: List[int], unvisited: Set[int], cost: float):
-        """
-        Represents a state in the A* search.
-        
-        Args:
-            path (List[int]): Current path of visited cities
-            unvisited (Set[int]): Set of unvisited cities
-            cost (float): Current path cost (g-value)
-        """
+        """Represents a state in the A* search."""
         self.path = path
         self.unvisited = unvisited
         self.cost = cost  # g(n)
@@ -34,12 +27,6 @@ class State:
 
 class AStarTSP:
     def __init__(self, adj_matrix: np.ndarray):
-        """
-        Initialize the A* TSP solver.
-        
-        Args:
-            adj_matrix (np.ndarray): The adjacency matrix representing distances between cities
-        """
         self.adj_matrix = adj_matrix
         self.n_cities = len(adj_matrix)
         self.nodes_expanded = 0
@@ -145,7 +132,15 @@ class AStarTSP:
     
     @time_tracked
     def solve(self, start_city: int = 0) -> Tuple[List[int], float, int]:
-        """Find optimal solution using A* search."""
+        """
+        Find optimal solution using A* search.
+        
+        Args:
+            start_city (int): The city to start from. Defaults to 0.
+        
+        Returns:
+            Tuple[List[int], float, int]: The path, its cost, and nodes expanded
+        """
         self.nodes_expanded = 0
         self._mst_cache.clear()
         self._best_known_cost = float('inf')

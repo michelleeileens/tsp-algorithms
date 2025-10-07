@@ -9,34 +9,28 @@ from src.algorithms.nearest_neighbor import NearestNeighbor, NearestNeighbor2Opt
 from src.algorithms.astar import AStarTSP
 from src.algorithms.local_search import HillClimbing, SimulatedAnnealing, GeneticAlgorithm
 from src.utils import load_matrix, get_matrix_files
+
 # REQUIRED PLOTTING FUNCTIONS FOR ASSIGNMENT
 from src.visualization.plotting import (
     # Part 1: NN algorithms comparison (3 plots - sizes 5,10,15,20,25,30)
     plot_nn_algorithms_wall_time,
     plot_nn_algorithms_cpu_time,
     plot_nn_algorithms_cost,
+    plot_rrnn_k_parameter,              # RRNN k parameter optimization plot
+    plot_rrnn_repeats_parameter,        # RRNN num_repeats parameter optimization plot
+    plot_rrnn_hyperparameter_combined,  # RRNN combined hyperparameter plot
     
-    # Part 2: A* comparison (4 plots - sizes 5-10)
-    plot_relative_wall_time_with_nodes,
-    plot_relative_cpu_time_with_nodes,
-    plot_relative_cost_with_nodes,
+    # Part 2: A* comparison (5 plots - sizes 5-10) - NN algorithms divided by A*
+    plot_nn_wall_time_relative_to_astar,
+    plot_nn_cpu_time_relative_to_astar,
+    plot_nn_cost_relative_to_astar,
+    plot_astar_cost_comparison,
     plot_astar_nodes_expanded,
     
-    # Part 3: Local search comparison (3 plots - sizes 5-10)
-    plot_local_search_relative_wall_time,
-    plot_local_search_relative_cpu_time,
-    plot_local_search_relative_cost
-)
-
-# RRNN HYPERPARAMETER OPTIMIZATION FUNCTIONS (enabled for analysis)
-from src.visualization.plotting import (
-    plot_rrnn_k_parameter,           # RRNN k parameter optimization plot
-    plot_rrnn_repeats_parameter,     # RRNN num_repeats parameter optimization plot
-    plot_rrnn_hyperparameter_combined  # RRNN combined hyperparameter plot
-)
-
-# UNUSED PLOTTING FUNCTIONS (commented out - can be enabled for detailed analysis)
-from src.visualization.plotting import (
+    # Part 3: Local search comparison (3 plots - sizes 5-10) - Local search divided by A*
+    plot_local_search_wall_time_relative_to_astar,
+    plot_local_search_cpu_time_relative_to_astar,
+    plot_local_search_cost_relative_to_astar,
     plot_hc_hyperparameter,          # Hill Climbing parameter tuning
     plot_sa_hyperparameter,          # Simulated Annealing parameter tuning
     plot_ga_hyperparameter,          # Genetic Algorithm parameter tuning
@@ -188,13 +182,22 @@ def main():
                 files_by_size[size] = []
             files_by_size[size].append(file)
     
-    # Select one random matrix for each target size
+    # Use ALL matrices for each target size (not just 1 random)
     selected_files = []
     for size in target_sizes:
         if size in files_by_size and files_by_size[size]:
-            chosen_file = random.choice(files_by_size[size])
-            selected_files.append(chosen_file)
-            print(f"Selected for size {size}: {chosen_file}")
+            # Filter to get all 10 random matrices for this size (0-9)
+            size_files = []
+            for i in range(10):
+                expected_filename = f"{size}_random_adj_mat_{i}.txt"
+                if expected_filename in files_by_size[size]:
+                    size_files.append(expected_filename)
+            
+            if len(size_files) == 10:  # Ensure we have all 10 matrices
+                selected_files.extend(size_files)
+                print(f"Selected for size {size}: all {len(size_files)} matrices (0-9)")
+            else:
+                print(f"Warning: Expected 10 matrices for size {size}, found {len(size_files)}: {size_files}")
         else:
             print(f"Warning: No files found for size {size}")
     
@@ -222,32 +225,26 @@ def main():
     plot_nn_algorithms_wall_time(results_part1, 'plots/nn_algorithms_wall_time.png')
     plot_nn_algorithms_cpu_time(results_part1, 'plots/nn_algorithms_cpu_time.png')
     plot_nn_algorithms_cost(results_part1, 'plots/nn_algorithms_cost.png')
-    print(f"  ✓ Generated 3 NN comparison plots for sizes: {sorted(results_part1.get('NN', {}).keys())}")
-
-    # Part 2: A* comparison plots (sizes 5-10)
+   
+    # Part 2: A* comparison plots (sizes 5-10) - NN algorithms divided by A*
     print("\nGenerating Part 2: A* comparison plots...")
-    plot_relative_wall_time_with_nodes(results_astar, 'plots/astar_wall_time_comparison.png')
-    plot_relative_cpu_time_with_nodes(results_astar, 'plots/astar_cpu_time_comparison.png')
-    plot_relative_cost_with_nodes(results_astar, 'plots/astar_solution_quality_comparison.png')
+    plot_nn_wall_time_relative_to_astar(results_astar, 'plots/astar_wall_time_comparison.png')
+    plot_nn_cpu_time_relative_to_astar(results_astar, 'plots/astar_cpu_time_comparison.png')
+    plot_nn_cost_relative_to_astar(results_astar, 'plots/astar_cost_comparison.png')
+    plot_astar_cost_comparison(results_astar, 'plots/astar_cost_standalone.png')
     plot_astar_nodes_expanded(results_astar, 'plots/astar_nodes_expanded.png')
-    print(f"  ✓ Generated 4 A* comparison plots for sizes: {sorted(results_astar.get('A*', {}).keys())}")
-
+   
     # Part 3: Local Search algorithms comparison plots (sizes 5-10 relative to A*)
     print("\nGenerating Part 3: Local Search algorithms comparison plots...")
-    plot_local_search_relative_wall_time(results_astar, 'plots/local_search_wall_time.png')
-    plot_local_search_relative_cpu_time(results_astar, 'plots/local_search_cpu_time.png')
-    plot_local_search_relative_cost(results_astar, 'plots/local_search_cost.png')
-    print(f"  ✓ Generated 3 Local Search comparison plots for sizes: {sorted(results_astar.get('Hill Climbing', {}).keys())}")
+    plot_local_search_wall_time_relative_to_astar(results_astar, 'plots/local_search_wall_time.png')
+    plot_local_search_cpu_time_relative_to_astar(results_astar, 'plots/local_search_cpu_time.png')
+    plot_local_search_cost_relative_to_astar(results_astar, 'plots/local_search_cost.png')
     
-    print(f"\n🎉 All 10 required plots generated successfully!")
+    print(f" All required plots generated successfully!")
 
     print("\nExecution completed. Check 'plots' directory for visualizations.")
     
-    # Extra Credit: Solve 500-city TSP matrix
-    print("\n" + "="*60)
-    print("EXTRA CREDIT: 500-City TSP Solution")
-    print("="*60)
-    
+    # Extra Credit: Solve 500-city TSP matrix  
     extra_credit_file = os.path.join(matrix_dir, "extra_credit.txt")
     if os.path.exists(extra_credit_file):
         print(f"Loading extra credit matrix: {os.path.basename(extra_credit_file)}")
@@ -269,134 +266,145 @@ def main():
 def generate_rrnn_hyperparameter_analysis():
     """Generate RRNN hyperparameter optimization plots and analysis"""
     
-    # Experimental results from hyperparameter optimization
-    k_results = {
-        1: 1.6200,
-        2: 2.0526, 
-        3: 2.2362,
-        4: 2.5345,
-        5: 2.5294
-    }
+    print("Running RRNN hyperparameter optimization...")
     
-    repeats_results = {
-        10: 2.7660,
-        20: 2.4716,
-        30: 2.3294,
-        50: 2.3463,
-        75: 2.3415,
-        100: 2.0701
-    }
+    # Load test matrix for analysis
+    test_matrix = load_matrix("mats_911/10_random_adj_mat_0.txt")
     
-    print("\n" + "="*60)
-    print("GENERATING RRNN HYPERPARAMETER ANALYSIS")
-    print("="*60)
+    # Test different k values
+    k_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    k_results = {}
+    
+    print("Testing k parameter...")
+    for k in k_values:
+        costs = []
+        for _ in range(5):  # Multiple runs for reliability
+            rrnn = RepeatedRandomNN(test_matrix)
+            (_, cost), _, _ = rrnn.solve(k=k, num_repeats=30)
+            costs.append(cost)
+        k_results[k] = np.median(costs)
+        print(f"  k={k}: median cost = {k_results[k]:.4f}")
+    
+    # Test different num_repeats values
+    repeat_values = [10, 20, 30, 50, 75, 100]
+    repeats_results = {}
+    
+    print("Testing num_repeats parameter...")
+    for repeats in repeat_values:
+        costs = []
+        for _ in range(5):  # Multiple runs for reliability
+            rrnn = RepeatedRandomNN(test_matrix)
+            (_, cost), _, _ = rrnn.solve(k=3, num_repeats=repeats)
+            costs.append(cost)
+        repeats_results[repeats] = np.median(costs)
+        print(f"  num_repeats={repeats}: median cost = {repeats_results[repeats]:.4f}")
     
     # Generate plots
     print("Generating RRNN hyperparameter optimization plots...")
     plot_rrnn_k_parameter(k_results, 'plots/rrnn_k_parameter_optimization.png')
     plot_rrnn_repeats_parameter(repeats_results, 'plots/rrnn_repeats_parameter_optimization.png')
     plot_rrnn_hyperparameter_combined(k_results, repeats_results, 'plots/rrnn_hyperparameter_optimization.png')
-    
-    # Analysis
-    optimal_k = 3  # Based on analysis (balance of randomization)
-    optimal_repeats = 30  # Based on diminishing returns
-    
-    print(f"\n✓ Generated RRNN hyperparameter analysis:")
-    print(f"  • K parameter optimization plot")
-    print(f"  • num_repeats parameter optimization plot") 
-    print(f"  • Combined hyperparameter analysis plot")
-    print(f"\n🔍 Key Findings:")
-    print(f"  • Optimal k = {optimal_k} (good balance of randomization)")
-    print(f"  • Optimal num_repeats = {optimal_repeats} (performance vs efficiency)")
-    print(f"  • RRNN now uses these optimized parameters by default")
 
 
 def generate_local_search_analysis():
     """Generate local search convergence and hyperparameter analysis."""
     from src.algorithms.local_search import HillClimbing, SimulatedAnnealing, GeneticAlgorithm
     import numpy as np
-    
-    print("\n" + "="*60)
-    print("GENERATING LOCAL SEARCH ANALYSIS")
-    print("="*60)
-    
-    # Load test matrix for analysis
-    test_matrix = load_matrix("mats_911/10_random_adj_mat_0.txt")
-    
-    # === CONVERGENCE ANALYSIS ===
+    import random
+
+    # Load multiple test matrices for more robust analysis
     print("\nGenerating convergence analysis...")
+    test_matrices = []
+    for size in [5, 10, 15, 20, 25, 30]:
+        # Select 2 random matrices for each size
+        available_files = [f"mats_911/{size}_random_adj_mat_{i}.txt" for i in range(10)]
+        selected_files = random.sample(available_files, min(2, len(available_files)))
+        for file in selected_files:
+            if os.path.exists(file):
+                test_matrices.append(load_matrix(file))
     
-    # Hill Climbing convergence
-    hc = HillClimbing(test_matrix)
-    _, _, hc_convergence = hc.solve_with_convergence(num_restarts=5)
-    hc_iterations = [x[0] for x in hc_convergence]
-    hc_costs = [x[1] for x in hc_convergence]
-    plot_hc_convergence(hc_iterations, hc_costs, 'plots/hc_convergence_analysis.png')
+    # Use first matrix for detailed analysis if we have matrices
+    test_matrix = test_matrices[0] if test_matrices else load_matrix("mats_911/10_random_adj_mat_0.txt")
+
     
-    # Simulated Annealing convergence  
-    sa = SimulatedAnnealing(test_matrix)
-    _, _, sa_convergence = sa.solve_with_convergence()
-    sa_iterations = [x[0] for x in sa_convergence]
-    sa_costs = [x[1] for x in sa_convergence]
-    plot_sa_convergence(sa_iterations, sa_costs, 'plots/sa_convergence_analysis.png')
+    # Hill Climbing convergence (multiple runs for candlestick plots)
+    print("  Running Hill Climbing convergence analysis...")
+    hc_convergence_data = []
+    for run in range(5):
+        hc = HillClimbing(test_matrix)
+        _, _, hc_convergence = hc.solve_with_convergence(num_restarts=3)
+        hc_convergence_data.append(hc_convergence[:25])  # Limit to first 25 iterations
+    plot_hc_convergence(hc_convergence_data, 'plots/hc_convergence_analysis.png')
     
-    # Genetic Algorithm convergence
-    ga = GeneticAlgorithm(test_matrix)
-    _, _, ga_convergence = ga.solve_with_convergence(num_generations=100)
-    ga_generations = [x[0] for x in ga_convergence]
-    ga_costs = [x[1] for x in ga_convergence]
-    plot_ga_convergence(ga_generations, ga_costs, 'plots/ga_convergence_analysis.png')
+    # Simulated Annealing convergence (multiple runs for candlestick plots)
+    print("  Running Simulated Annealing convergence analysis...")
+    sa_convergence_data = []
+    for run in range(5):
+        sa = SimulatedAnnealing(test_matrix)
+        _, _, sa_convergence = sa.solve_with_convergence()
+        sa_convergence_data.append(sa_convergence[:25])  # Limit to first 25 iterations
+    plot_sa_convergence(sa_convergence_data, 'plots/sa_convergence_analysis.png')
+    
+    # Genetic Algorithm convergence (multiple runs for candlestick plots)
+    print("  Running Genetic Algorithm convergence analysis...")
+    ga_convergence_data = []
+    for run in range(3):  # Fewer runs due to GA being slower
+        ga = GeneticAlgorithm(test_matrix)
+        _, _, ga_convergence = ga.solve_with_convergence(num_generations=50)  # Reduced for speed
+        ga_convergence_data.append(ga_convergence[:25])  # Limit to first 25 generations
+    plot_ga_convergence(ga_convergence_data, 'plots/ga_convergence_analysis.png')
     
     # === HYPERPARAMETER ANALYSIS ===
     print("Analyzing hyperparameters...")
     
-    # Hill Climbing num_restarts analysis
-    restart_values = [1, 3, 5, 10, 15, 20]
+    # Hill Climbing: Tune Restarts
+    restart_values = [1, 3, 5, 7, 10, 13, 15, 17,20]
     hc_results = []
     for restarts in restart_values:
         costs = []
         for _ in range(5):  # Multiple runs for statistical reliability
             hc = HillClimbing(test_matrix)
-            _, cost = hc.solve(num_restarts=restarts)
+            result = hc.solve(num_restarts=restarts)
+            cost = result[1] if isinstance(result, tuple) else result
             costs.append(cost)
         hc_results.append(np.median(costs))
     
     plot_hc_hyperparameter(restart_values, hc_results, 'plots/hc_hyperparameter_analysis.png')
-    
-    # Simulated Annealing temperature analysis
-    temp_values = [50, 100, 200, 500, 1000, 2000]
-    sa_results = []
-    for temp in temp_values:
+
+    # Simulated Annealing: Tune Cooling Rate
+    alpha_values = [0.80, 0.825, 0.85, 0.875, 0.90, 0.925, 0.95, 0.975]
+    sa_alpha_results = []
+    for alpha in alpha_values:
         costs = []
         for _ in range(5):
             sa = SimulatedAnnealing(test_matrix)
-            _, cost = sa.solve(initial_temp=temp)
+            (_, cost), _, _ = sa.solve(initial_temp=test_matrix.shape[0] * 50, 
+                                        alpha=alpha, 
+                                        track_convergence=False)
             costs.append(cost)
-        sa_results.append(np.median(costs))
-    
-    plot_sa_hyperparameter("Initial Temperature", temp_values, sa_results, 'plots/sa_hyperparameter_analysis.png')
-    
-    # Genetic Algorithm population analysis
-    pop_values = [50, 100, 150, 200, 300, 400]
-    ga_results = []
-    for pop_size in pop_values:
-        costs = []
-        for _ in range(3):  # Fewer runs due to GA being slower
-            ga = GeneticAlgorithm(test_matrix)
-            _, cost = ga.solve(population_size=pop_size, num_generations=100)
-            costs.append(cost)
-        ga_results.append(np.median(costs))
-    
-    plot_ga_hyperparameter("Population Size", pop_values, ga_results, 'plots/ga_hyperparameter_analysis.png')
-    
-    print(f"\n✓ Generated local search analysis:")
-    print(f"  • Hill Climbing convergence plot")
-    print(f"  • Simulated Annealing convergence plot")
-    print(f"  • Genetic Algorithm convergence plot")
-    print(f"  • Hill Climbing hyperparameter analysis (num_restarts)")
-    print(f"  • Simulated Annealing hyperparameter analysis (temperature)")
-    print(f"  • Genetic Algorithm hyperparameter analysis (population)")
+        sa_alpha_results.append(np.median(costs))
 
+    plot_sa_hyperparameter("Cooling Rate (alpha)", alpha_values, sa_alpha_results, 
+                            'plots/sa_hyperparameter_analysis.png')
+    
+    # Genetic Algorithm: Tune Mutation Rate
+    mutation_rates = [0.01, 0.05, 0.1, 0.15, 0.2]
+    ga_mutation_results = []
+    for mut_rate in mutation_rates:
+        costs = []
+        for _ in range(5):
+            ga = GeneticAlgorithm(test_matrix)
+            (_, cost), _, _ = ga.solve(population_size=100, 
+                                        num_generations=200,
+                                        mutation_rate=mut_rate,
+                                        track_convergence=False)
+            costs.append(cost)
+        ga_mutation_results.append(np.median(costs))
+
+    plot_ga_hyperparameter("Mutation Rate", mutation_rates, ga_mutation_results,
+                            'plots/ga_hyperparameter_analysis.png')
+
+    print("All done!")
 
 if __name__ == "__main__":
     # Run main TSP comparison

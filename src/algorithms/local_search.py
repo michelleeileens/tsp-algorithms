@@ -423,13 +423,13 @@ class GeneticAlgorithm:
         return population[winner_idx][:]
 
     @time_tracked
-    def solve(self, population_size: int = 150, num_generations: int = 300, mutation_rate: float = 0.02, track_convergence: bool = False) -> Tuple[List[int], float]:
+    def solve(self, population_size: int = 50, num_generations: int = 100, mutation_rate: float = 0.02, track_convergence: bool = False) -> Tuple[List[int], float]:
         """
         Solve TSP using Genetic Algorithm with Order Crossover.
         
         Args:
-            population_size: Number of individuals in population (default: 150)
-            num_generations: Number of generations to evolve (default: 300) 
+            population_size: Number of individuals in population (default: 50)
+            num_generations: Number of generations to evolve (default: 100) 
             mutation_rate: Probability of mutation per individual (default: 0.02)
             track_convergence (bool): Whether to track convergence history
             

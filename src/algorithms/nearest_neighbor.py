@@ -151,7 +151,7 @@ class RepeatedRandomNN:
     def solve(self, k: int = 3, num_repeats: int = 30, start_city: int = 0) -> Tuple[List[int], float]:
         """
         Solve TSP using Repeated Random Nearest Neighbor.
-        Uses optimized parameters: k=3, num_repeats=30 
+        Uses optimized parameters: k=3, num_repeats=30
         (from hyperparameter optimization on rrnn_optimization.py)
         
         Args:

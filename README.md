@@ -2,13 +2,15 @@
 
 A comprehensive Traveling Salesman Problem (TSP) algorithm analysis and comparison system implementing 7 different algorithms with performance visualization and hyperparameter optimization.
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Note
 
 ```bash
 cd /home/michelleeileens/421
 source .venv/bin/activate
 python src/main.py
 ```
+Note: 
+Plotting code and .pngs generated are messy (many unused). The ones used for the report have been pasted directly to the report. You may ignore plotting.py and plots. 
 
 ## 📋 Overview
 
@@ -41,13 +43,14 @@ The system generates 13 comprehensive plots organized into three parts:
 - Comparison of heuristics vs optimal A* solutions (sizes 5-10)
 - Time ratios, solution quality ratios, and nodes expanded analysis
 
-### Part 3: Local Search Analysis (3 plots)
+### Part 3: Local Search Analysis (6 plots)
 - Local search algorithms relative to A* performance (sizes 5-10)
-- Time and quality trade-offs analysis
+- Convergence analysis for Hill Climbing, Simulated Annealing, and Genetic Algorithm
+- Hyperparameter optimization plots using single test matrix
 
 ### RRNN Hyperparameter Optimization (3 plots)
-- k parameter optimization analysis
-- num_repeats parameter optimization analysis  
+- k parameter optimization analysis using single test matrix
+- num_repeats parameter optimization analysis using single test matrix
 - Combined hyperparameter analysis
 
 ## 🗂 Project Structure
@@ -62,8 +65,7 @@ The system generates 13 comprehensive plots organized into three parts:
 │   ├── visualization/
 │   │   └── plotting.py           # All plotting functions
 │   ├── main.py                   # Main execution script
-│   ├── utils.py                  # Utility functions
-│   └── rrnn_optimization.py      # RRNN hyperparameter optimization
+│   └── utils.py                  # Utility functions
 ├── mats_911/                     # Test matrices (TSP instances)
 ├── plots/                        # Generated visualization plots
 └── .venv/                        # Python virtual environment
@@ -77,29 +79,16 @@ The system generates 13 comprehensive plots organized into three parts:
 - **Large instances**: 25-30 cities (heuristics only)
 
 ### Optimized Parameters
-- **RRNN**: k=3, num_repeats=30 (from hyperparameter optimization)
-- **Hill Climbing**: 5 random restarts, 2-opt moves
-- **Simulated Annealing**: Optimized cooling schedule with efficient delta calculation
-- **Genetic Algorithm**: Population size 50, order crossover, tournament selection
+- **RRNN**: k=3, num_repeats=30 (from single-matrix hyperparameter optimization)
+- **Hill Climbing**: Multiple restarts tested on single matrix, 2-opt moves
+- **Simulated Annealing**: Cooling rate optimization on single matrix
+- **Genetic Algorithm**: Mutation rate optimization on single matrix
 
 ### Performance Metrics
 - **Wall Time**: Real-world execution time
 - **CPU Time**: Processor time consumed
 - **Solution Quality**: Tour cost (lower is better)
 - **Nodes Expanded**: Search space exploration (A* only)
-
-## 📈 Key Findings
-
-### Algorithm Performance Summary
-- **Fastest**: NN (0.00003-0.0001s across all sizes)
-- **Best Quality/Speed**: NN-2Opt (10-30% better than NN, 20x slower)
-- **Most Consistent**: RRNN with optimized parameters
-- **Highest Quality**: Genetic Algorithm (often finds optimal, but 1000-10000x slower)
-
-### Scalability Analysis
-- **A* Limit**: Becomes impractical beyond 10 cities (>0.036s execution time)
-- **Heuristic Speed**: NN maintains sub-millisecond performance even for 30 cities
-- **Quality Trade-offs**: Local search algorithms achieve near-optimal results with reasonable computational cost
 
 ## 🛠 Dependencies
 
@@ -130,24 +119,13 @@ result = solver.solve(k=3, num_repeats=30)  # Optimized parameters
 
 ## 🔬 Experimental Validation
 
-The system includes comprehensive validation using n-gon matrices with known optimal solutions:
-- **Success Rate**: 95.2% of algorithms produce valid TSP tours
-- **Optimization Results**: RRNN parameters optimized across 10 different TSP instances
-- **Statistical Analysis**: Multiple runs with median performance reporting
+The system includes validation using test matrices:
+- **Success Rate**: All algorithms produce valid TSP tours
+- **Optimization Results**: Hyperparameters optimized using single test matrix (10_random_adj_mat_0.txt)
 
 ## 📄 Output
 
 The system generates:
 - **Console Output**: Real-time algorithm performance results
 - **13 PNG Plots**: Comprehensive performance visualizations
-- **Analysis Summary**: Key findings and optimal parameter recommendations
 
-## 🏆 Academic Context
-
-This project implements and analyzes fundamental algorithms in combinatorial optimization, demonstrating:
-- Exact vs approximate algorithm trade-offs
-- Constructive vs improvement heuristic performance
-- Metaheuristic parameter optimization
-- Comprehensive experimental methodology
-
-Perfect for coursework in algorithms, optimization, or artificial intelligence.

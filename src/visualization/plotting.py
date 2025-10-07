@@ -598,12 +598,26 @@ def plot_astar_nodes_expanded(results, output_path):
 # PART III: LOCAL SEARCH ALGORITHMS (3 required plots + 6 unused analysis plots)
 
 # UNUSED HYPERPARAMETER TUNING AND CONVERGENCE PLOTS (commented out - available for detailed analysis)
-def plot_hc_hyperparameter(num_restarts_values, median_costs, output_path):
-    """Plot Hill Climbing cost vs num_restarts parameter."""
+def plot_hc_hyperparameter(num_restarts_values, cost_data, output_path):
+    """Plot Hill Climbing cost vs num_restarts parameter with candlestick-style error bars."""
     _setup_plot()
-    plt.plot(num_restarts_values, median_costs, color=_algo_colors['Hill Climbing'], marker=_algo_markers['Hill Climbing'])
+    
+    if isinstance(cost_data, dict) and 'median' in cost_data:
+        # Candlestick-style plot with error bars
+        medians = cost_data['median']
+        mins = cost_data['min']
+        maxs = cost_data['max']
+        
+        plt.errorbar(num_restarts_values, medians, 
+                    yerr=[np.array(medians) - np.array(mins), np.array(maxs) - np.array(medians)],
+                    color=_algo_colors['Hill Climbing'], marker=_algo_markers['Hill Climbing'],
+                    capsize=5, capthick=2, label='Median with Min/Max range')
+    else:
+        # Backward compatibility for simple median data
+        plt.plot(num_restarts_values, cost_data, color=_algo_colors['Hill Climbing'], marker=_algo_markers['Hill Climbing'])
+    
     plt.xlabel('num_restarts Parameter')
-    plt.ylabel('Median Cost')
+    plt.ylabel('Cost')
     plt.title('Hill Climbing: Effect of num_restarts on Cost')
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
@@ -631,182 +645,70 @@ def plot_ga_hyperparameter(param_name, param_values, median_costs, output_path):
     plt.savefig(output_path, dpi=300)
     plt.close()
 
-def plot_sa_hyperparameter(param_name, param_values, median_costs, output_path):
-    """Plot Simulated Annealing cost vs hyperparameter."""
-    _setup_plot()
-    plt.plot(param_values, median_costs, color=_algo_colors['Simulated Annealing'], marker=_algo_markers['Simulated Annealing'])
-    plt.xlabel(f'{param_name} Parameter')
-    plt.ylabel('Median Cost')
-    plt.title(f'Simulated Annealing: Effect of {param_name} on Cost')
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
-
-def plot_ga_hyperparameter(param_name, param_values, median_costs, output_path):
-    """Plot Genetic Algorithm cost vs hyperparameter."""
-    _setup_plot()
-    plt.plot(param_values, median_costs, color=_algo_colors['Genetic'], marker=_algo_markers['Genetic'])
-    plt.xlabel(f'{param_name} Parameter')
-    plt.ylabel('Median Cost')
-    plt.title(f'Genetic Algorithm: Effect of {param_name} on Cost')
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
-
-def plot_hc_convergence(convergence_data_list, output_path):
-    """Plot Hill Climbing convergence with candlestick-style error bars.
+def plot_hc_convergence(convergence_data, output_path):
+    """Plot Hill Climbing convergence.
     
     Args:
-        convergence_data_list: List of convergence histories from multiple runs
+        convergence_data: List of (iteration, cost) tuples
         output_path: Output file path
     """
     _setup_plot()
     
-    # Find the maximum length across all runs
-    max_length = max(len(conv) for conv in convergence_data_list)
+    # Extract iterations and costs
+    iterations = [iter_num for iter_num, cost in convergence_data]
+    costs = [cost for iter_num, cost in convergence_data]
     
-    # Collect costs for each iteration across all runs
-    iterations = list(range(1, min(26, max_length + 1)))  # Limit to 25 iterations
-    costs_by_iteration = [[] for _ in iterations]
-    
-    for conv_history in convergence_data_list:
-        for i, (iter_num, cost) in enumerate(conv_history[:25]):
-            if i < len(iterations):
-                costs_by_iteration[i].append(cost)
-    
-    # Calculate median, min, max for error bars
-    medians = []
-    mins = []
-    maxs = []
-    
-    for costs in costs_by_iteration:
-        if costs:
-            medians.append(np.median(costs))
-            mins.append(np.min(costs))
-            maxs.append(np.max(costs))
-        else:
-            medians.append(np.nan)
-            mins.append(np.nan)
-            maxs.append(np.nan)
-    
-    medians = np.array(medians)
-    mins = np.array(mins)
-    maxs = np.array(maxs)
-    err_lower = medians - mins
-    err_upper = maxs - medians
-    
-    plt.errorbar(iterations[:len(medians)], medians, yerr=[err_lower, err_upper], 
-                fmt='-', color=_algo_colors['Hill Climbing'], 
-                marker=_algo_markers['Hill Climbing'], capsize=5, linewidth=2, markersize=6)
+    plt.plot(iterations, costs, color=_algo_colors['Hill Climbing'], 
+            marker=_algo_markers['Hill Climbing'], linewidth=2, markersize=6)
     
     plt.xlabel('Iteration Number')
-    plt.ylabel('Cost (median with min/max range)')
+    plt.ylabel('Cost')
     plt.title('Hill Climbing: Solution Convergence Over Iterations')
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
     plt.close()
 
-def plot_sa_convergence(convergence_data_list, output_path):
-    """Plot Simulated Annealing convergence with candlestick-style error bars.
+def plot_sa_convergence(convergence_data, output_path):
+    """Plot Simulated Annealing convergence.
     
     Args:
-        convergence_data_list: List of convergence histories from multiple runs
+        convergence_data: List of (iteration, cost) tuples
         output_path: Output file path
     """
     _setup_plot()
     
-    # Find the maximum length across all runs
-    max_length = max(len(conv) for conv in convergence_data_list)
+    # Extract iterations and costs
+    iterations = [iter_num for iter_num, cost in convergence_data]
+    costs = [cost for iter_num, cost in convergence_data]
     
-    # Collect costs for each iteration across all runs
-    iterations = list(range(1, min(26, max_length + 1)))  # Limit to 25 iterations
-    costs_by_iteration = [[] for _ in iterations]
-    
-    for conv_history in convergence_data_list:
-        for i, (iter_num, cost) in enumerate(conv_history[:25]):
-            if i < len(iterations):
-                costs_by_iteration[i].append(cost)
-    
-    # Calculate median, min, max for error bars
-    medians = []
-    mins = []
-    maxs = []
-    
-    for costs in costs_by_iteration:
-        if costs:
-            medians.append(np.median(costs))
-            mins.append(np.min(costs))
-            maxs.append(np.max(costs))
-        else:
-            medians.append(np.nan)
-            mins.append(np.nan)
-            maxs.append(np.nan)
-    
-    medians = np.array(medians)
-    mins = np.array(mins)
-    maxs = np.array(maxs)
-    err_lower = medians - mins
-    err_upper = maxs - medians
-    
-    plt.errorbar(iterations[:len(medians)], medians, yerr=[err_lower, err_upper], 
-                fmt='-', color=_algo_colors['Simulated Annealing'], 
-                marker=_algo_markers['Simulated Annealing'], capsize=5, linewidth=2, markersize=6)
+    plt.plot(iterations, costs, color=_algo_colors['Simulated Annealing'], 
+            marker=_algo_markers['Simulated Annealing'], linewidth=2, markersize=6)
     
     plt.xlabel('Iteration Number')
-    plt.ylabel('Cost (median with min/max range)')
+    plt.ylabel('Cost')
     plt.title('Simulated Annealing: Solution Convergence Over Iterations')
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
     plt.close()
 
-def plot_ga_convergence(convergence_data_list, output_path):
-    """Plot Genetic Algorithm convergence with candlestick-style error bars.
+def plot_ga_convergence(convergence_data, output_path):
+    """Plot Genetic Algorithm convergence.
     
     Args:
-        convergence_data_list: List of convergence histories from multiple runs
+        convergence_data: List of (generation, cost) tuples
         output_path: Output file path
     """
     _setup_plot()
     
-    # Find the maximum length across all runs
-    max_length = max(len(conv) for conv in convergence_data_list)
+    # Extract generations and costs
+    generations = [gen_num for gen_num, cost in convergence_data]
+    costs = [cost for gen_num, cost in convergence_data]
     
-    # Collect costs for each generation across all runs
-    generations = list(range(1, min(26, max_length + 1)))  # Limit to 25 generations
-    costs_by_generation = [[] for _ in generations]
-    
-    for conv_history in convergence_data_list:
-        for i, (gen_num, cost) in enumerate(conv_history[:25]):
-            if i < len(generations):
-                costs_by_generation[i].append(cost)
-    
-    # Calculate median, min, max for error bars
-    medians = []
-    mins = []
-    maxs = []
-    
-    for costs in costs_by_generation:
-        if costs:
-            medians.append(np.median(costs))
-            mins.append(np.min(costs))
-            maxs.append(np.max(costs))
-        else:
-            medians.append(np.nan)
-            mins.append(np.nan)
-            maxs.append(np.nan)
-    
-    medians = np.array(medians)
-    mins = np.array(mins)
-    maxs = np.array(maxs)
-    err_lower = medians - mins
-    err_upper = maxs - medians
-    
-    plt.errorbar(generations[:len(medians)], medians, yerr=[err_lower, err_upper], 
-                fmt='-', color=_algo_colors['Genetic'], 
-                marker=_algo_markers['Genetic'], capsize=5, linewidth=2, markersize=6)
+    plt.plot(generations, costs, color=_algo_colors['Genetic'], 
+            marker=_algo_markers['Genetic'], linewidth=2, markersize=6)
     
     plt.xlabel('Generation Number')
-    plt.ylabel('Cost (median with min/max range)')
+    plt.ylabel('Cost')
     plt.title('Genetic Algorithm: Solution Convergence Over Generations')
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)

@@ -268,8 +268,10 @@ def generate_rrnn_hyperparameter_analysis():
     
     print("Running RRNN hyperparameter optimization...")
     
-    # Load test matrix for analysis
-    test_matrix = load_matrix("mats_911/10_random_adj_mat_0.txt")
+    # Load 10 test matrices of size 10 for analysis
+    test_matrices = []
+    for i in range(10):
+        test_matrices.append(load_matrix(f"mats_911/10_random_adj_mat_{i}.txt"))
     
     # Test different k values
     k_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -278,7 +280,7 @@ def generate_rrnn_hyperparameter_analysis():
     print("Testing k parameter...")
     for k in k_values:
         costs = []
-        for _ in range(5):  # Multiple runs for reliability
+        for test_matrix in test_matrices:  # Test on all 10 matrices
             rrnn = RepeatedRandomNN(test_matrix)
             (_, cost), _, _ = rrnn.solve(k=k, num_repeats=30)
             costs.append(cost)
@@ -292,7 +294,7 @@ def generate_rrnn_hyperparameter_analysis():
     print("Testing num_repeats parameter...")
     for repeats in repeat_values:
         costs = []
-        for _ in range(5):  # Multiple runs for reliability
+        for test_matrix in test_matrices:  # Test on all 10 matrices
             rrnn = RepeatedRandomNN(test_matrix)
             (_, cost), _, _ = rrnn.solve(k=3, num_repeats=repeats)
             costs.append(cost)
@@ -307,101 +309,79 @@ def generate_rrnn_hyperparameter_analysis():
 
 
 def generate_local_search_analysis():
-    """Generate local search convergence and hyperparameter analysis."""
+    """Generate local search convergence and hyperparameter analysis using single test matrix.
+    
+    Uses 10_random_adj_mat_0.txt as the test matrix for all analyses including:
+    - Hill Climbing convergence and hyperparameter tuning (num_restarts)
+    - Simulated Annealing convergence and hyperparameter tuning (cooling rate)
+    - Genetic Algorithm convergence and hyperparameter tuning (mutation rate)
+    """
     from src.algorithms.local_search import HillClimbing, SimulatedAnnealing, GeneticAlgorithm
     import numpy as np
     import random
 
-    # Load multiple test matrices for more robust analysis
+    # Load single test matrix for analysis
     print("\nGenerating convergence analysis...")
-    test_matrices = []
-    for size in [5, 10, 15, 20, 25, 30]:
-        # Select 2 random matrices for each size
-        available_files = [f"mats_911/{size}_random_adj_mat_{i}.txt" for i in range(10)]
-        selected_files = random.sample(available_files, min(2, len(available_files)))
-        for file in selected_files:
-            if os.path.exists(file):
-                test_matrices.append(load_matrix(file))
-    
-    # Use first matrix for detailed analysis if we have matrices
-    test_matrix = test_matrices[0] if test_matrices else load_matrix("mats_911/10_random_adj_mat_0.txt")
+    test_matrix = load_matrix("mats_911/10_random_adj_mat_0.txt")
 
     
-    # Hill Climbing convergence (multiple runs for candlestick plots)
+    # Hill Climbing convergence
     print("  Running Hill Climbing convergence analysis...")
-    hc_convergence_data = []
-    for run in range(5):
-        hc = HillClimbing(test_matrix)
-        _, _, hc_convergence = hc.solve_with_convergence(num_restarts=3)
-        hc_convergence_data.append(hc_convergence[:25])  # Limit to first 25 iterations
-    plot_hc_convergence(hc_convergence_data, 'plots/hc_convergence_analysis.png')
+    hc = HillClimbing(test_matrix)
+    _, _, hc_convergence = hc.solve_with_convergence(num_restarts=3)
+    plot_hc_convergence(hc_convergence[:25], 'plots/hc_convergence_analysis.png')
     
-    # Simulated Annealing convergence (multiple runs for candlestick plots)
+    # Simulated Annealing convergence
     print("  Running Simulated Annealing convergence analysis...")
-    sa_convergence_data = []
-    for run in range(5):
-        sa = SimulatedAnnealing(test_matrix)
-        _, _, sa_convergence = sa.solve_with_convergence()
-        sa_convergence_data.append(sa_convergence[:25])  # Limit to first 25 iterations
-    plot_sa_convergence(sa_convergence_data, 'plots/sa_convergence_analysis.png')
+    sa = SimulatedAnnealing(test_matrix)
+    _, _, sa_convergence = sa.solve_with_convergence(initial_temp=test_matrix.shape[0] * 50)
+    plot_sa_convergence(sa_convergence, 'plots/sa_convergence_analysis.png')
     
-    # Genetic Algorithm convergence (multiple runs for candlestick plots)
+    # Genetic Algorithm convergence
     print("  Running Genetic Algorithm convergence analysis...")
-    ga_convergence_data = []
-    for run in range(3):  # Fewer runs due to GA being slower
-        ga = GeneticAlgorithm(test_matrix)
-        _, _, ga_convergence = ga.solve_with_convergence(num_generations=50)  # Reduced for speed
-        ga_convergence_data.append(ga_convergence[:25])  # Limit to first 25 generations
-    plot_ga_convergence(ga_convergence_data, 'plots/ga_convergence_analysis.png')
+    ga = GeneticAlgorithm(test_matrix)
+    _, _, ga_convergence = ga.solve_with_convergence(num_generations=50)
+    plot_ga_convergence(ga_convergence, 'plots/ga_convergence_analysis.png')
     
     # === HYPERPARAMETER ANALYSIS ===
     print("Analyzing hyperparameters...")
     
     # Hill Climbing: Tune Restarts
-    restart_values = [1, 3, 5, 7, 10, 13, 15, 17,20]
-    hc_results = []
+    restart_values = [1, 3, 5, 7, 10, 13, 15, 17, 20]
+    hc_costs = []
     for restarts in restart_values:
-        costs = []
-        for _ in range(5):  # Multiple runs for statistical reliability
-            hc = HillClimbing(test_matrix)
-            result = hc.solve(num_restarts=restarts)
-            cost = result[1] if isinstance(result, tuple) else result
-            costs.append(cost)
-        hc_results.append(np.median(costs))
+        hc = HillClimbing(test_matrix)
+        result = hc.solve(num_restarts=restarts)
+        cost = result[1] if isinstance(result, tuple) else result
+        hc_costs.append(cost)
     
-    plot_hc_hyperparameter(restart_values, hc_results, 'plots/hc_hyperparameter_analysis.png')
+    plot_hc_hyperparameter(restart_values, hc_costs, 'plots/hc_hyperparameter_analysis.png')
 
     # Simulated Annealing: Tune Cooling Rate
-    alpha_values = [0.80, 0.825, 0.85, 0.875, 0.90, 0.925, 0.95, 0.975]
-    sa_alpha_results = []
+    alpha_values = [0.85, 0.9, 0.95, 0.975]
+    sa_costs = []
     for alpha in alpha_values:
-        costs = []
-        for _ in range(5):
-            sa = SimulatedAnnealing(test_matrix)
-            (_, cost), _, _ = sa.solve(initial_temp=test_matrix.shape[0] * 50, 
-                                        alpha=alpha, 
-                                        track_convergence=False)
-            costs.append(cost)
-        sa_alpha_results.append(np.median(costs))
+        sa = SimulatedAnnealing(test_matrix)
+        (_, cost), _, _ = sa.solve(initial_temp=test_matrix.shape[0] * 50, 
+                                    alpha=alpha, 
+                                    track_convergence=False)
+        sa_costs.append(cost)
 
-    plot_sa_hyperparameter("Cooling Rate (alpha)", alpha_values, sa_alpha_results, 
+    plot_sa_hyperparameter("Cooling Rate (alpha)", alpha_values, sa_costs, 
                             'plots/sa_hyperparameter_analysis.png')
     
     # Genetic Algorithm: Tune Mutation Rate
-    mutation_rates = [0.01, 0.05, 0.1, 0.15, 0.2]
-    ga_mutation_results = []
+    mutation_rates = [0.05, 0.1, 0.15, 0.2]
+    ga_costs = []
     for mut_rate in mutation_rates:
-        costs = []
-        for _ in range(5):
-            ga = GeneticAlgorithm(test_matrix)
-            (_, cost), _, _ = ga.solve(population_size=100, 
-                                        num_generations=200,
-                                        mutation_rate=mut_rate,
-                                        track_convergence=False)
-            costs.append(cost)
-        ga_mutation_results.append(np.median(costs))
+        ga = GeneticAlgorithm(test_matrix)
+        (_, cost), _, _ = ga.solve(population_size=100, 
+                                    num_generations=200,
+                                    mutation_rate=mut_rate,
+                                    track_convergence=False)
+        ga_costs.append(cost)
 
-    plot_ga_hyperparameter("Mutation Rate", mutation_rates, ga_mutation_results,
+    plot_ga_hyperparameter("Mutation Rate", mutation_rates, ga_costs,
                             'plots/ga_hyperparameter_analysis.png')
 
     print("All done!")

@@ -2,15 +2,17 @@
 
 A comprehensive Traveling Salesman Problem (TSP) algorithm analysis and comparison system implementing 7 different algorithms with performance visualization and hyperparameter optimization.
 
-## 🚀 Quick Start & Note
+## Quick Start
 
 ```bash
-cd /home/michelleeileens/421
-source .venv/bin/activate
+# Set up virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# Run the analysis
 python src/main.py
-```
-Note: 
-Plotting code and .pngs generated are messy (many unused). The ones used for the report have been pasted directly to the report. You may ignore plotting.py and plots. 
+``` 
 
 ## 📋 Overview
 
